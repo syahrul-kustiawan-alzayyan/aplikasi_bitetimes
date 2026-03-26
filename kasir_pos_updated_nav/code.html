@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-container": "#fcfcff",
+              "tertiary-container": "#007bb5",
+              "surface-variant": "#e6e2d8",
+              "on-primary-container": "#fffbff",
+              "surface-dim": "#dddacf",
+              "inverse-primary": "#ffb68d",
+              "secondary": "#855233",
+              "error": "#ba1a1a",
+              "on-background": "#1c1c15",
+              "on-error": "#ffffff",
+              "secondary-container": "#feba95",
+              "tertiary-fixed": "#cae6ff",
+              "on-secondary-container": "#79482a",
+              "surface-container-lowest": "#ffffff",
+              "tertiary": "#006290",
+              "inverse-on-surface": "#f4f1e6",
+              "on-secondary-fixed": "#321200",
+              "error-container": "#ffdad6",
+              "surface-container": "#f1eee3",
+              "on-primary-fixed-variant": "#763400",
+              "outline-variant": "#ddc1b3",
+              "surface": "#fdf9ee",
+              "on-tertiary-fixed-variant": "#004b70",
+              "surface-tint": "#9a4600",
+              "outline": "#8a7266",
+              "on-primary": "#ffffff",
+              "secondary-fixed": "#ffdbc9",
+              "surface-container-high": "#ece8dd",
+              "surface-container-low": "#f7f3e8",
+              "background": "#fdf9ee",
+              "surface-bright": "#fdf9ee",
+              "on-surface": "#1c1c15",
+              "secondary-fixed-dim": "#fbb892",
+              "on-tertiary": "#ffffff",
+              "on-error-container": "#93000a",
+              "primary-fixed-dim": "#ffb68d",
+              "tertiary-fixed-dim": "#8dcdff",
+              "on-primary-fixed": "#321200",
+              "on-secondary": "#ffffff",
+              "on-secondary-fixed-variant": "#693b1e",
+              "primary-fixed": "#ffdbc9",
+              "on-surface-variant": "#564338",
+              "on-tertiary-fixed": "#001e30",
+              "primary-container": "#bb5808",
+              "surface-container-highest": "#e6e2d8",
+              "primary": "#974400",
+              "inverse-surface": "#31312a"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="w-full top-0 sticky z-50 bg-[#fdf9ee] dark:bg-stone-950">
+<div class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center overflow-hidden">
+<img alt="Baker Profile" class="w-full h-full object-cover" data-alt="Portrait of a friendly artisan baker in a linen apron smiling in a warm sunlit kitchen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPTqgIu4Hvv4O386yz7MduwBZcMoLuiJ9O2nooRSxNf2Lvdym-aXk0tIUaH-qO-cpT47uMYOgr-vR74XDEsN4cRc-FlBcbv5c9-huPKLhV1GWUGS1zjLFgfM-PbG2EAT97abJeQR0-2qcTWNnhCX3kha9z1LnkmO_55ms0LVzrlmsNJfU3dzX8ayZ4XhlZtrooV80IZdeKApUifaKVMv8gPYXwsncOmi1geLPNRWLRvDccdbVx2XVPgs11Ki4D5p-u47OQuF2h79c"/>
+</div>
+<span class="text-[#974400] dark:text-[#bb5808] font-black tracking-tight text-xl font-['Plus_Jakarta_Sans']">Cookies POS</span>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<button class="text-[#1c1c15] dark:text-[#fdf9ee] font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined">point_of_sale</span> Kasir
+                </button>
+<button class="text-[#564338] dark:text-[#ddc1b3] font-semibold hover:bg-[#f7f3e8]/50 transition-colors px-3 py-2 rounded-lg">Masuk</button>
+<button class="text-[#564338] dark:text-[#ddc1b3] font-semibold hover:bg-[#f7f3e8]/50 transition-colors px-3 py-2 rounded-lg">Katalog</button>
+</div>
+<button class="text-[#974400] dark:text-[#bb5808] p-2 rounded-full hover:bg-[#f7f3e8]/50">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-4 md:px-6 pt-6 pb-32 grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Product Grid (Left Canvas) -->
+<section class="lg:col-span-8 space-y-8">
+<header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="text-4xl font-extrabold text-on-surface tracking-tight mb-2">Pilih Menu</h1>
+<p class="text-on-surface-variant font-medium">Klik cookie untuk menambah ke keranjang</p>
+</div>
+<div class="flex gap-2">
+<span class="px-4 py-2 bg-secondary-container text-on-secondary-container rounded-full text-sm font-bold flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span> Oven 1: Aktif
+                    </span>
+</div>
+</header>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-6">
+<!-- Product 1 -->
+<button class="group relative flex flex-col text-left transition-all active:scale-95">
+<div class="aspect-square rounded-lg overflow-hidden bg-surface-container-low mb-3 relative">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Gourmet chocolate chip cookies stacked on a cooling rack with melting chocolate chunks" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3NxMdDpNO_uUkSAvyPjp7V1TKkYfORR3oPDeHEynSqWxowqzpZ1YJMxtGjntu_H36u-2JXX709_TZzyIzyYL1TtgKg9Ok3UFuu81scEV-ED8EPFObFuFZ0yeIWY7Idb3biRHcv7zxN11Sa9YiXrPn0hH13INplWRsWy_b_V1D8n3u559xEw6Q6Qs_McSvsIIDb1oiaVEe2T0YZKhr7TxAlaqtB1upWn5PaschTJADx1FF5cI5QrwHqFGn9iBNUplaYc57D9tgqlU"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<div class="px-1">
+<h3 class="font-bold text-lg text-on-surface">Choco Chip Classic</h3>
+<p class="text-primary font-bold font-['Inter']">Rp 15.000</p>
+</div>
+</button>
+<!-- Product 2 -->
+<button class="group relative flex flex-col text-left transition-all active:scale-95">
+<div class="aspect-square rounded-lg overflow-hidden bg-surface-container-low mb-3 relative">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Vibrant red velvet cookies with white chocolate drizzle on a rustic wooden board" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAgPM3VuoVyypQEQ71Gkjqd9cSO0sT5C0sBlNxM-v0vZG8gWl37fSPeaP9sLJXcEo5syRn_38ICPV-qMjeFqx8GpigmNJgWr379GMeEWtc4FHSxitvNcP6kWKxArjM5ADH7z3A5CNlr9SqeX_PwJA43hs6Vkka5bXVpGGnWNKtsbmxacpNMgxiDmvRW-ja4yvxruW_cL9-GfyJk4wQTyFP_8ukyJzYvRm4lghAK0QAs-IfR-_9kgYgBmkCSfGAhknzneRWa2-Xf24"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<div class="px-1">
+<h3 class="font-bold text-lg text-on-surface">Velvet Dream</h3>
+<p class="text-primary font-bold font-['Inter']">Rp 18.000</p>
+</div>
+<span class="absolute top-2 right-2 bg-tertiary text-white text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider">Favorit</span>
+</button>
+<!-- Product 3 -->
+<button class="group relative flex flex-col text-left transition-all active:scale-95">
+<div class="aspect-square rounded-lg overflow-hidden bg-surface-container-low mb-3 relative">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Soft matcha green tea cookies sprinkled with sesame seeds on a white plate" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmyQ_ZHBJ0SqBBc-BWJkhln7rFI-xOeYLhPL1xE_uet2ChPGdesfmAnxTEalvUL2or_NXNy4tbGt8dYaJ54ukprr6AyP1wF5AtnjQrVN8jsti-DBioIbt_pD3uxBGzz4_5V90S0ZDGLHr0f6jiKYsCQHQ1zybAuduwu-EhLZhE4_nrg5AbT-OGvRP8a-JBz35gb62J-cxNs341LWPEfW3jQ9tiMnxgPRyWDrHb78dAgMKk2v45fT1fNRiITEjnkeF1jWsxSCRGHaY"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<div class="px-1">
+<h3 class="font-bold text-lg text-on-surface">Matcha Zen</h3>
+<p class="text-primary font-bold font-['Inter']">Rp 20.000</p>
+</div>
+</button>
+<!-- Product 4 -->
+<button class="group relative flex flex-col text-left transition-all active:scale-95">
+<div class="aspect-square rounded-lg overflow-hidden bg-surface-container-low mb-3 relative">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Macadamia white chocolate cookies on a beige ceramic plate" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAE_03II5r42zINMF_qzpQ_bbC8nUpHVXwhFGyJEiy-B00kjtfm3KlJo0S8R6RHb3wXK6P6kONGrCAp5WfOZ6cmb7JoQ42u6qEk5rYYS0lFNRpcv0KNxXoCTOr2u9P5pAhzHeaYjSSKtOlitIjPdDzck8-BYWnDy_CywLcp5ZpmZsJ1qvO43h81N_xfMILdPkJcVNXNy9dLDA1arSbtQI24xhrZBrn1kdedZ-YsucgCPvckj_G2Nv561doVCOlZEJGMLJFp9CfG-OE"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<div class="px-1">
+<h3 class="font-bold text-lg text-on-surface">Macadamia White</h3>
+<p class="text-primary font-bold font-['Inter']">Rp 22.000</p>
+</div>
+</button>
+<!-- Product 5 -->
+<button class="group relative flex flex-col text-left transition-all active:scale-95 opacity-50 cursor-not-allowed">
+<div class="aspect-square rounded-lg overflow-hidden bg-surface-container-low mb-3 relative grayscale">
+<img class="w-full h-full object-cover" data-alt="Dark double chocolate brownies style cookies dusted with sea salt" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDbw0B9xDdy3R0eNo6dtKRs6RtYZrCACdovxV-RwbqFcT5deCYtXwPmFpgh-g4RiPs-Ki5FOoHJQvj3GamoWe9mxoTE4DjRpgCM9cdPcFNkLLxcIj-H3Gkku8vmx66P7Ft_N1umKQE6oNDq62UM3Sj-Mvb1THgXJu3d1xz671os9-M6MEsXPvLSVeomV9iAkInkbz4vZkcang3m6_nmWWtM00pHrwhMWS5ADrfbRwRecxHHHGUojnXEj6FQ3TartmG5GyV6wdNsxlI"/>
+<div class="absolute inset-0 flex items-center justify-center bg-black/20">
+<span class="bg-error text-white font-bold px-3 py-1 rounded-full text-xs">Habis</span>
+</div>
+</div>
+<div class="px-1">
+<h3 class="font-bold text-lg text-on-surface">Dark Sea Salt</h3>
+<p class="text-on-surface-variant font-bold font-['Inter']">Rp 17.000</p>
+</div>
+</button>
+<!-- Product 6 -->
+<button class="group relative flex flex-col text-left transition-all active:scale-95">
+<div class="aspect-square rounded-lg overflow-hidden bg-surface-container-low mb-3 relative">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Assorted small colorful cookies in a bakery display window" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7S4EmL58owCS4Eb9Qo6PvGqYxkXsiCayTefcNBsmNDTcwA5NJpkq2ZJz79FWiT9RtL91oKoLAQRYlE7yABuTyVRr8SD9s8GQemvQaokZjJzNbWTe24gxpspsn3GEPfhkLSA5fv-Wlt64BYSaTvBViLBszoz1_nW_-NHraoOSHS-q3QmqZ27rdj95dgH7P4B6otE61lMESzZgRPTC2vZ6JASUVXqPLjAc4KyeP3I0ICv14Nc7nhvST2CBkoYnwRLeO4vcxfKAqNjE"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<div class="px-1">
+<h3 class="font-bold text-lg text-on-surface">Oatmeal Raisin</h3>
+<p class="text-primary font-bold font-['Inter']">Rp 15.000</p>
+</div>
+</button>
+</div>
+</section>
+<!-- Cart Section (Right Sidebar) -->
+<aside class="lg:col-span-4 h-fit sticky top-24">
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant/15 overflow-hidden flex flex-col shadow-[0_8px_24px_rgba(86,67,56,0.04)]">
+<div class="p-6 border-b border-outline-variant/10">
+<h2 class="text-xl font-bold text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">shopping_basket</span>
+                        Keranjang
+                    </h2>
+</div>
+<div class="p-4 space-y-4 max-h-[353px] overflow-y-auto">
+<!-- Cart Item 1 -->
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Macro of a chocolate chip cookie" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeQZPWzFLrh0i-uqSvnDqoepQlMi6Hg9kmGizFvqIbCOidnDM8GUkob4TJKZBr4_VUtWHic1fy_msUtAYwpuXaQLlmR_qlW3UgL3OziEM3lKRrBupQtQnxN52rrhW79GTaVnIY4j__320UElemICYI2tvrQ1OiOIoxB1HD1K9LyJ5gtirMS-VAsjDoTtyp9dgSRIKhwGHhQ7suN6iQC5cfbl3WXaRJlS7KuHEn-5VVwtuVKUfKayc-3HkTWsTRanTu0YtrbQBY-ng"/>
+</div>
+<div class="flex-1">
+<p class="font-bold text-on-surface text-sm">Choco Chip Classic</p>
+<p class="text-xs text-on-surface-variant">Rp 15.000</p>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-low rounded-full px-2 py-1">
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-white active:scale-90 transition-all">
+<span class="material-symbols-outlined text-base">remove</span>
+</button>
+<span class="text-sm font-bold w-4 text-center">2</span>
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-primary hover:bg-white active:scale-90 transition-all">
+<span class="material-symbols-outlined text-base">add</span>
+</button>
+</div>
+</div>
+<!-- Cart Item 2 -->
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Red velvet cookie detail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvEU1Inens-1xyN3MXcTQJLIxLsAiawINmkjYeXUNMs6Rsogs_ohIAw2m5318ja8iur7BK8udSrpzpHQUpedQ5R4nwFIpk8E7R11Y5IE5msf8wI00wv1laZuNqbfkz18QMOMTK6Zt5F3RH6nXw8O0zr16UmKv0jysaFjNWJNMRy3SwPgyRKnp4K2P1j3SVsSn0ChN9mHRnkd4OUk3QdvBaWw2thjLl_LPj36WHg7ATwM8TchRXIycXwqqIPd8cpiSCIxjD4ACflGA"/>
+</div>
+<div class="flex-1">
+<p class="font-bold text-on-surface text-sm">Velvet Dream</p>
+<p class="text-xs text-on-surface-variant">Rp 18.000</p>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-low rounded-full px-2 py-1">
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-on-surface hover:bg-white active:scale-90 transition-all">
+<span class="material-symbols-outlined text-base">remove</span>
+</button>
+<span class="text-sm font-bold w-4 text-center">1</span>
+<button class="w-6 h-6 rounded-full flex items-center justify-center text-primary hover:bg-white active:scale-90 transition-all">
+<span class="material-symbols-outlined text-base">add</span>
+</button>
+</div>
+</div>
+</div>
+<div class="p-6 bg-surface-container-low space-y-4">
+<div class="flex justify-between items-center text-on-surface-variant font-medium">
+<span>Subtotal</span>
+<span>Rp 48.000</span>
+</div>
+<div class="flex justify-between items-end pt-2">
+<span class="text-on-surface font-bold">Total Tagihan</span>
+<span class="text-3xl font-extrabold text-on-surface tracking-tighter">Rp 48.000</span>
+</div>
+<div class="grid grid-cols-2 gap-3 pt-4">
+<button class="flex flex-col items-center justify-center py-4 rounded-xl border-2 border-primary/20 text-primary font-bold hover:bg-white transition-all active:scale-95 group">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform">payments</span>
+                            Cash
+                        </button>
+<button class="flex flex-col items-center justify-center py-4 rounded-xl bg-gradient-to-br from-[#974400] to-[#bb5808] text-white font-bold shadow-lg active:scale-95 group">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform">qr_code_2</span>
+                            QRIS
+                        </button>
+</div>
+</div>
+</div>
+</aside>
+</main>
+<!-- Cash Payment Overlay (Sample Modal) -->
+<div class="fixed inset-0 bg-[#1c1c15]/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 hidden">
+<div class="bg-surface w-full max-w-md rounded-lg overflow-hidden shadow-2xl">
+<div class="p-6 border-b border-outline-variant/15 flex justify-between items-center">
+<h3 class="text-xl font-bold">Pembayaran Tunai</h3>
+<button class="p-2 hover:bg-surface-container-high rounded-full">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-8 space-y-6 text-center">
+<div>
+<p class="text-on-surface-variant font-medium mb-1 uppercase tracking-widest text-xs">Total Tagihan</p>
+<p class="text-4xl font-black text-on-surface">Rp 48.000</p>
+</div>
+<div class="text-left space-y-2">
+<label class="text-sm font-bold text-on-surface-variant px-4">Uang Diterima</label>
+<div class="relative">
+<span class="absolute left-6 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant">Rp</span>
+<input class="w-full pl-14 pr-6 py-5 bg-surface-container-highest rounded-xl border-none focus:ring-2 focus:ring-primary/40 text-2xl font-bold text-on-surface" type="text" value="50.000"/>
+</div>
+</div>
+<div class="p-6 bg-secondary-container/30 rounded-xl">
+<p class="text-on-secondary-container font-medium mb-1 text-sm">Kembalian</p>
+<p class="text-3xl font-black text-on-secondary-container">Rp 2.000</p>
+</div>
+<button class="w-full py-5 bg-primary text-white font-black rounded-full shadow-lg hover:opacity-90 active:scale-95 transition-all text-lg">
+                    Selesaikan Pesanan
+                </button>
+</div>
+</div>
+</div>
+<!-- QRIS Payment Overlay (Sample Modal) -->
+<div class="fixed inset-0 bg-[#1c1c15]/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 hidden">
+<div class="bg-surface w-full max-w-sm rounded-lg overflow-hidden shadow-2xl">
+<div class="p-6 border-b border-outline-variant/15 flex justify-between items-center">
+<h3 class="text-xl font-bold text-center w-full">Scan untuk Bayar</h3>
+</div>
+<div class="p-8 text-center space-y-6">
+<div class="bg-white p-4 rounded-xl inline-block border-2 border-surface-container-high shadow-inner">
+<img alt="QR Code" class="w-48 h-48" data-alt="Generic QR code square for digital payment mockup" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoV0-9Supb-Pg0q2Zq28W1bbPljqJ2R8CVSWrgY0r6mwpcE05soCjtnmhLhQOwkPfP_saWclhMocjI3LTSXpdAaQqIOmV8VHigoQhIT_t6OH5fnXzxD4fH5G4ZpZDFVQQ7fVAj6otYiY7I3zKvNkFUw2q0pdAFZN3QWiNsS_PXsaCgDwy0o5J4YTLCSBE2W5630Tvv3fpVBLEEkfaa9QdK6EmGf3g5SR1PGp3rwFdNfwAU1q2IDx06ixu286EuTJoYAFVFwaYn6Xg"/>
+</div>
+<div>
+<p class="text-2xl font-black text-on-surface">Rp 48.000</p>
+<p class="text-xs text-on-surface-variant font-bold mt-2 uppercase tracking-tighter">Masa berlaku: 04:59</p>
+</div>
+<div class="flex items-center justify-center gap-4 py-2 opacity-60">
+<span class="font-black text-xs">GOPAY</span>
+<span class="font-black text-xs">OVO</span>
+<span class="font-black text-xs">SHOPEE</span>
+<span class="font-black text-xs">DANA</span>
+</div>
+<button class="w-full py-4 border-2 border-outline-variant text-on-surface font-bold rounded-full hover:bg-surface-container-high active:scale-95 transition-all">
+                    Batalkan
+                </button>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar (Mobile) -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-end pb-8 px-4 md:hidden">
+<div class="fixed bottom-4 left-4 right-4 rounded-full border border-[#ddc1b3]/15 bg-[#fdf9ee]/80 dark:bg-stone-950/80 backdrop-blur-xl shadow-[0_8px_24px_rgba(86,67,56,0.04)] flex justify-around items-center h-20 px-4">
+<!-- Dashboard -->
+<a class="flex flex-col items-center justify-center text-[#564338] dark:text-[#ddc1b3] w-12 hover:opacity-90 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide mt-1">Dashboard</span>
+</a>
+<!-- Kasir (Active) -->
+<a class="flex flex-col items-center justify-center bg-gradient-to-br from-[#974400] to-[#bb5808] text-white rounded-full w-14 h-14 shadow-lg active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">point_of_sale</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide mt-0.5 hidden">Kasir</span>
+</a>
+<!-- Masuk (Payments) -->
+<a class="flex flex-col items-center justify-center text-[#564338] dark:text-[#ddc1b3] w-12 hover:opacity-90 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide mt-1">Masuk</span>
+</a>
+<!-- Keluar (Receipts) -->
+<a class="flex flex-col items-center justify-center text-[#564338] dark:text-[#ddc1b3] w-12 hover:opacity-90 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide mt-1">Keluar</span>
+</a>
+<!-- Katalog -->
+<a class="flex flex-col items-center justify-center text-[#564338] dark:text-[#ddc1b3] w-12 hover:opacity-90 transition-opacity active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide mt-1">Katalog</span>
+</a>
+</div>
+</nav>
+<!-- Floating Action Button (Only on Home/Dashboard context) -->
+<!-- Suppressed on POS/Details screens per instructions -->
+</body></html>

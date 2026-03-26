@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-dim": "#dddacf",
+              "surface": "#fdf9ee",
+              "on-error-container": "#93000a",
+              "secondary-fixed": "#ffdbc9",
+              "inverse-primary": "#ffb68d",
+              "surface-container": "#f1eee3",
+              "inverse-surface": "#31312a",
+              "on-primary-fixed": "#321200",
+              "tertiary-container": "#007bb5",
+              "tertiary": "#006290",
+              "on-tertiary": "#ffffff",
+              "on-error": "#ffffff",
+              "on-background": "#1c1c15",
+              "primary": "#974400",
+              "primary-fixed-dim": "#ffb68d",
+              "secondary-fixed-dim": "#fbb892",
+              "surface-bright": "#fdf9ee",
+              "primary-fixed": "#ffdbc9",
+              "on-tertiary-fixed-variant": "#004b70",
+              "secondary-container": "#feba95",
+              "outline": "#8a7266",
+              "on-secondary-container": "#79482a",
+              "surface-container-highest": "#e6e2d8",
+              "on-surface-variant": "#564338",
+              "surface-container-low": "#f7f3e8",
+              "secondary": "#855233",
+              "on-primary-fixed-variant": "#763400",
+              "error": "#ba1a1a",
+              "surface-variant": "#e6e2d8",
+              "on-tertiary-container": "#fcfcff",
+              "tertiary-fixed-dim": "#8dcdff",
+              "background": "#fdf9ee",
+              "surface-tint": "#9a4600",
+              "surface-container-high": "#ece8dd",
+              "on-primary": "#ffffff",
+              "outline-variant": "#ddc1b3",
+              "primary-container": "#bb5808",
+              "on-tertiary-fixed": "#001e30",
+              "on-surface": "#1c1c15",
+              "error-container": "#ffdad6",
+              "inverse-on-surface": "#f4f1e6",
+              "on-primary-container": "#fffbff",
+              "on-secondary-fixed": "#321200",
+              "tertiary-fixed": "#cae6ff",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary-fixed-variant": "#693b1e",
+              "on-secondary": "#ffffff"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        background-color: #fdf9ee;
+        color: #1c1c15;
+        font-family: 'Inter', sans-serif;
+      }
+      .artisanal-gradient {
+        background: linear-gradient(135deg, #974400 0%, #bb5808 100%);
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-40 bg-[#fdf9ee] dark:bg-stone-950">
+<div class="flex justify-between items-center px-6 py-4 w-full max-w-md mx-auto">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="close-up portrait of a professional female baker in a warm kitchen setting wearing a linen apron" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZOvMHSoI62WRKYZTV_ndIXzGgnqEFWFU3nDX4rsO7sHGn4_rwxS3_oOx1_KpwvCxTuQ0UuSKZl8iGccrNVrPLZmJg_FkxPRoPfKx1YOVwOeUNaRp4d1IzltSs0dzWo0XO8TmHAXXghacvW3uYnBljDAcBvdKviCWmbygrcS9kX2-yHegdM141vhAfRUnpyphFyPzNWPdjDKMf0V-X4aAQqoyskH56juEnEHI-cCgFpJ01Pq6sX7j2Ew1vL2h6rjw7_2dcJe6IuM4"/>
+</div>
+<h1 class="font-['Plus_Jakarta_Sans'] font-bold text-xl text-[#974400] dark:text-[#bb5808]">Catat Pengeluaran</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#f7f3e8]/50 transition-colors text-[#974400]">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</div>
+</header>
+<main class="max-w-md mx-auto px-6 space-y-8 mt-4">
+<!-- KPI Card: Total Pengeluaran -->
+<section class="relative overflow-hidden bg-surface-container-lowest p-6 rounded-lg shadow-[0_8px_24px_rgba(86,67,56,0.04)] border border-outline-variant/15">
+<div class="flex flex-col gap-1">
+<span class="text-on-surface-variant font-label text-sm font-medium">Total Pengeluaran Bulan Ini</span>
+<div class="flex items-baseline gap-1">
+<span class="text-primary font-headline font-bold text-lg">Rp</span>
+<span class="text-on-surface font-headline font-extrabold text-4xl tracking-tight">2.150.000</span>
+</div>
+</div>
+<!-- Red-toned status bar -->
+<div class="mt-4 h-2 w-full bg-error-container/30 rounded-full overflow-hidden">
+<div class="h-full bg-error w-3/4 rounded-full"></div>
+</div>
+<div class="mt-2 flex justify-between items-center">
+<span class="text-xs text-error font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="trending_up">trending_up</span>
+                    12% dari bulan lalu
+                </span>
+<span class="text-xs text-on-surface-variant">Limit: Rp 3.000.000</span>
+</div>
+</section>
+<!-- Form Section: Tambah Pengeluaran Baru -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h2 class="font-headline font-bold text-lg text-on-surface">Tambah Pengeluaran Baru</h2>
+<span class="material-symbols-outlined text-primary" data-icon="add_circle">add_circle</span>
+</div>
+<div class="bg-surface-container-low p-6 rounded-lg space-y-5">
+<!-- Date Picker -->
+<div class="space-y-1.5">
+<label class="text-xs font-semibold uppercase tracking-wider text-on-surface-variant px-1">Tanggal</label>
+<div class="relative">
+<input class="w-full bg-surface-container-highest border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/40 text-on-surface font-medium" type="date" value="2023-10-27"/>
+</div>
+</div>
+<!-- Nominal Input -->
+<div class="space-y-1.5">
+<label class="text-xs font-semibold uppercase tracking-wider text-on-surface-variant px-1">Nominal Rp</label>
+<input class="w-full bg-surface-container-highest border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/40 text-on-surface font-headline font-bold text-xl" placeholder="0" type="number"/>
+</div>
+<!-- Kategori Dropdown -->
+<div class="space-y-1.5">
+<label class="text-xs font-semibold uppercase tracking-wider text-on-surface-variant px-1">Kategori</label>
+<select class="w-full bg-surface-container-highest border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/40 text-on-surface font-medium appearance-none">
+<option>Bahan Baku</option>
+<option>Packaging</option>
+<option>Operasional</option>
+<option>Gaji</option>
+<option>Lain-lain</option>
+</select>
+</div>
+<!-- Keterangan -->
+<div class="space-y-1.5">
+<label class="text-xs font-semibold uppercase tracking-wider text-on-surface-variant px-1">Keterangan</label>
+<textarea class="w-full bg-surface-container-highest border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/40 text-on-surface font-medium resize-none" placeholder="Contoh: Belanja Mentega A2 5kg" rows="2"></textarea>
+</div>
+<!-- Submit Button -->
+<button class="w-full artisanal-gradient py-4 rounded-xl text-white font-headline font-bold text-lg shadow-lg active:scale-[0.98] transition-transform">
+                    Simpan Pengeluaran
+                </button>
+</div>
+</section>
+<!-- List Section: Riwayat Pengeluaran -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h2 class="font-headline font-bold text-lg text-on-surface">Riwayat Pengeluaran</h2>
+<button class="text-primary font-semibold text-sm">Lihat Semua</button>
+</div>
+<div class="space-y-3">
+<!-- Item 1 -->
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-xl border border-outline-variant/10">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="egg">egg</span>
+</div>
+<div>
+<h3 class="font-bold text-on-surface">Belanja Mentega A2</h3>
+<p class="text-xs text-on-surface-variant">27 Okt 2023 • Bahan Baku</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-error">- Rp 450.000</p>
+<span class="text-[10px] bg-secondary-container px-2 py-0.5 rounded-full text-on-secondary-container font-bold uppercase">Lunas</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-xl border border-outline-variant/10">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="package_2">package_2</span>
+</div>
+<div>
+<h3 class="font-bold text-on-surface">Box Cookie Premium</h3>
+<p class="text-xs text-on-surface-variant">26 Okt 2023 • Packaging</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-error">- Rp 120.000</p>
+<span class="text-[10px] bg-secondary-container px-2 py-0.5 rounded-full text-on-secondary-container font-bold uppercase">Lunas</span>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-xl border border-outline-variant/10">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="electric_bolt">electric_bolt</span>
+</div>
+<div>
+<h3 class="font-bold text-on-surface">Listrik Toko</h3>
+<p class="text-xs text-on-surface-variant">25 Okt 2023 • Operasional</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-error">- Rp 850.000</p>
+<span class="text-[10px] bg-secondary-container px-2 py-0.5 rounded-full text-on-secondary-container font-bold uppercase">Lunas</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-end pb-8 px-4 bg-[#fdf9ee]/80 dark:bg-stone-950/80 backdrop-blur-xl">
+<div class="flex justify-around items-center w-full max-w-md mx-auto bg-surface-container-lowest/50 rounded-full border border-[#ddc1b3]/15 px-4 py-2 shadow-[0_8px_24px_rgba(86,67,56,0.04)]">
+<!-- Dashboard -->
+<button class="flex flex-col items-center justify-center text-[#564338] dark:text-[#ddc1b3] w-12 hover:opacity-90 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide">Dashboard</span>
+</button>
+<!-- Kasir -->
+<button class="flex flex-col items-center justify-center text-[#564338] dark:text-[#ddc1b3] w-12 hover:opacity-90 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="point_of_sale">point_of_sale</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide">Kasir</span>
+</button>
+<!-- Masuk (Income) -->
+<button class="flex flex-col items-center justify-center text-[#564338] dark:text-[#ddc1b3] w-12 hover:opacity-90 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide">Masuk</span>
+</button>
+<!-- Keluar (Expenses) - ACTIVE -->
+<button class="flex flex-col items-center justify-center bg-gradient-to-br from-[#974400] to-[#bb5808] text-white rounded-full w-14 h-14 shadow-lg active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="receipt_long" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide">Keluar</span>
+</button>
+<!-- Katalog -->
+<button class="flex flex-col items-center justify-center text-[#564338] dark:text-[#ddc1b3] w-12 hover:opacity-90 transition-opacity active:scale-90 duration-200">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-['Inter'] text-[10px] font-semibold tracking-wide">Katalog</span>
+</button>
+</div>
+</nav>
+</body></html>
