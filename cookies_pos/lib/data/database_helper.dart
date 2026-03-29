@@ -104,8 +104,12 @@ class DatabaseHelper {
 
   Future<void> updateProductStock(int productId, int newStock) async {
     final db = await database;
-    await db.update('products', {'stock': newStock},
-        where: 'id = ?', whereArgs: [productId]);
+    await db.update(
+      'products',
+      {'stock': newStock},
+      where: 'id = ?',
+      whereArgs: [productId],
+    );
   }
 
   Future<void> deleteProduct(int productId) async {
@@ -129,10 +133,10 @@ class DatabaseHelper {
       });
 
       // Decrease stock
-      await db.rawUpdate(
-        'UPDATE products SET stock = stock - ? WHERE id = ?',
-        [item.quantity, item.productId],
-      );
+      await db.rawUpdate('UPDATE products SET stock = stock - ? WHERE id = ?', [
+        item.quantity,
+        item.productId,
+      ]);
     }
 
     return saleId;
@@ -206,33 +210,33 @@ class DatabaseHelper {
 
   Future<Map<String, int>> getDashboardStats({DateTime? startDate}) async {
     final startStr = startDate?.toIso8601String() ?? '';
-    
+
     final db = await database;
-    
+
     // Total Sales Count
     var saleItemsResult = await db.rawQuery(
-      startDate == null 
-        ? 'SELECT COALESCE(SUM(quantity), 0) as total FROM sale_items'
-        : 'SELECT COALESCE(SUM(si.quantity), 0) as total FROM sale_items si JOIN sales s ON si.saleId = s.id WHERE s.createdAt >= ?',
-      startDate == null ? [] : [startStr]
+      startDate == null
+          ? 'SELECT COALESCE(SUM(quantity), 0) as total FROM sale_items'
+          : 'SELECT COALESCE(SUM(si.quantity), 0) as total FROM sale_items si JOIN sales s ON si.saleId = s.id WHERE s.createdAt >= ?',
+      startDate == null ? [] : [startStr],
     );
     final totalSold = (saleItemsResult.first['total'] as int?) ?? 0;
 
     // Total Income
     var incomeResult = await db.rawQuery(
       startDate == null
-        ? 'SELECT COALESCE(SUM(amount), 0) as total FROM incomes'
-        : 'SELECT COALESCE(SUM(amount), 0) as total FROM incomes WHERE date >= ?',
-      startDate == null ? [] : [startStr]
+          ? 'SELECT COALESCE(SUM(amount), 0) as total FROM incomes'
+          : 'SELECT COALESCE(SUM(amount), 0) as total FROM incomes WHERE date >= ?',
+      startDate == null ? [] : [startStr],
     );
     final totalIncome = (incomeResult.first['total'] as int?) ?? 0;
 
     // Total Expense
     var expenseResult = await db.rawQuery(
       startDate == null
-        ? 'SELECT COALESCE(SUM(amount), 0) as total FROM expenses'
-        : 'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE date >= ?',
-      startDate == null ? [] : [startStr]
+          ? 'SELECT COALESCE(SUM(amount), 0) as total FROM expenses'
+          : 'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE date >= ?',
+      startDate == null ? [] : [startStr],
     );
     final totalExpense = (expenseResult.first['total'] as int?) ?? 0;
 
@@ -246,7 +250,9 @@ class DatabaseHelper {
     };
   }
 
-  Future<Map<String, dynamic>> getDynamicChartData({DateTime? startDate}) async {
+  Future<Map<String, dynamic>> getDynamicChartData({
+    DateTime? startDate,
+  }) async {
     final startStr = startDate?.toIso8601String() ?? '';
     final db = await database;
 
@@ -269,13 +275,15 @@ class DatabaseHelper {
     for (var m in incomes) {
       final dateStr = (m['date'] as String).substring(0, 10);
       uniqueDates.add(dateStr);
-      incomeMap[dateStr] = (incomeMap[dateStr] ?? 0) + (m['amount'] as int).toDouble();
+      incomeMap[dateStr] =
+          (incomeMap[dateStr] ?? 0) + (m['amount'] as int).toDouble();
     }
 
     for (var m in expenses) {
       final dateStr = (m['date'] as String).substring(0, 10);
       uniqueDates.add(dateStr);
-      expenseMap[dateStr] = (expenseMap[dateStr] ?? 0) + (m['amount'] as int).toDouble();
+      expenseMap[dateStr] =
+          (expenseMap[dateStr] ?? 0) + (m['amount'] as int).toDouble();
     }
 
     final sortedDates = uniqueDates.toList()..sort();
@@ -291,36 +299,32 @@ class DatabaseHelper {
       expenseSpots.add(expenseMap[date] ?? 0.0);
     }
 
-    return {
-      'income': incomeSpots,
-      'expense': expenseSpots,
-      'labels': labels,
-    };
+    return {'income': incomeSpots, 'expense': expenseSpots, 'labels': labels};
   }
 
   Future<Map<String, int>> getVariantSales({DateTime? startDate}) async {
     final startStr = startDate?.toIso8601String() ?? '';
     final db = await database;
-    
+
     final result = await db.rawQuery(
-      startDate == null 
-      ? '''
+      startDate == null
+          ? '''
       SELECT productName, COALESCE(SUM(quantity), 0) as totalQty
       FROM sale_items
       GROUP BY productName
       ORDER BY totalQty DESC
       LIMIT 5
       '''
-      : '''
+          : '''
       SELECT si.productName, COALESCE(SUM(si.quantity), 0) as totalQty
       FROM sale_items si
       JOIN sales s ON si.saleId = s.id
       WHERE s.createdAt >= ?
-      GROUP si.productName
+      GROUP BY si.productName
       ORDER BY totalQty DESC
       LIMIT 5
       ''',
-      startDate == null ? [] : [startStr]
+      startDate == null ? [] : [startStr],
     );
 
     final map = <String, int>{};
@@ -328,5 +332,210 @@ class DatabaseHelper {
       map[row['productName'] as String] = (row['totalQty'] as int?) ?? 0;
     }
     return map;
+  }
+
+  // ── Previous Period Comparison ─────────────────────────────────────────
+
+  /// Calculate the start date of the previous period based on the current filter
+  DateTime? getPreviousPeriodStartDate(DateTime? currentStartDate) {
+    if (currentStartDate == null) return null;
+
+    final now = DateTime.now();
+    final currentStart = currentStartDate;
+
+    // Calculate period duration
+    Duration periodDuration;
+    if (currentStart.year == now.year &&
+        currentStart.month == now.month &&
+        currentStart.day == now.day) {
+      // Hari Ini -> previous is yesterday
+      return DateTime(now.year, now.month, now.day - 1);
+    } else if (currentStart.weekday == 1 &&
+        currentStart.day == now.day - (now.weekday - 1)) {
+      // Minggu Ini -> previous is last week
+      periodDuration = Duration(days: 7);
+      return currentStart.subtract(periodDuration);
+    } else if (currentStart.day == 1) {
+      // Bulan Ini -> previous is last month
+      if (currentStart.month == 1) {
+        return DateTime(currentStart.year - 1, 12, 1);
+      } else {
+        return DateTime(currentStart.year, currentStart.month - 1, 1);
+      }
+    } else if (currentStart.month == 1 && currentStart.day == 1) {
+      // Tahun Ini -> previous is last year
+      return DateTime(currentStart.year - 1, 1, 1);
+    }
+
+    // Default: subtract same duration
+    periodDuration = now.difference(currentStart);
+    return currentStart.subtract(periodDuration);
+  }
+
+  /// Get end date for previous period (one day before current start, or equivalent period end)
+  DateTime? getPreviousPeriodEndDate(DateTime? currentStartDate) {
+    if (currentStartDate == null) return null;
+
+    final now = DateTime.now();
+    final currentStart = currentStartDate;
+
+    if (currentStart.year == now.year &&
+        currentStart.month == now.month &&
+        currentStart.day == now.day) {
+      // Hari Ini -> previous ends yesterday
+      return DateTime(now.year, now.month, now.day - 1, 23, 59, 59);
+    } else if (currentStart.day == 1 &&
+        currentStart.month == now.month &&
+        currentStart.year == now.year) {
+      // Bulan Ini -> previous is last month end
+      return currentStart.subtract(const Duration(days: 1));
+    } else if (currentStart.month == 1 && currentStart.day == 1) {
+      // Tahun Ini -> previous is last year end
+      return DateTime(currentStart.year - 1, 12, 31, 23, 59, 59);
+    }
+
+    // For week or custom periods
+    return currentStart.subtract(const Duration(days: 1));
+  }
+
+  /// Get dashboard stats for previous period
+  Future<Map<String, int>> getPreviousPeriodDashboardStats({
+    DateTime? previousStartDate,
+    DateTime? previousEndDate,
+  }) async {
+    final db = await database;
+
+    if (previousStartDate == null || previousEndDate == null) {
+      return {'totalSold': 0, 'totalIncome': 0, 'totalExpense': 0, 'profit': 0};
+    }
+
+    final startStr = previousStartDate.toIso8601String();
+    final endStr = previousEndDate.toIso8601String();
+
+    // Total Sales Count
+    var saleItemsResult = await db.rawQuery(
+      'SELECT COALESCE(SUM(si.quantity), 0) as total FROM sale_items si JOIN sales s ON si.saleId = s.id WHERE s.createdAt >= ? AND s.createdAt <= ?',
+      [startStr, endStr],
+    );
+    final totalSold = (saleItemsResult.first['total'] as int?) ?? 0;
+
+    // Total Income
+    var incomeResult = await db.rawQuery(
+      'SELECT COALESCE(SUM(amount), 0) as total FROM incomes WHERE date >= ? AND date <= ?',
+      [startStr, endStr],
+    );
+    final totalIncome = (incomeResult.first['total'] as int?) ?? 0;
+
+    // Total Expense
+    var expenseResult = await db.rawQuery(
+      'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE date >= ? AND date <= ?',
+      [startStr, endStr],
+    );
+    final totalExpense = (expenseResult.first['total'] as int?) ?? 0;
+
+    final profit = totalIncome - totalExpense;
+
+    return {
+      'totalSold': totalSold,
+      'totalIncome': totalIncome,
+      'totalExpense': totalExpense,
+      'profit': profit,
+    };
+  }
+
+  /// Get total income for a specific period
+  Future<int> getTotalIncomeForPeriod({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+
+    if (startDate == null || endDate == null) {
+      final result = await db.rawQuery(
+        'SELECT COALESCE(SUM(amount), 0) as total FROM incomes',
+      );
+      return (result.first['total'] as int?) ?? 0;
+    }
+
+    final startStr = startDate.toIso8601String();
+    final endStr = endDate.toIso8601String();
+
+    final result = await db.rawQuery(
+      'SELECT COALESCE(SUM(amount), 0) as total FROM incomes WHERE date >= ? AND date <= ?',
+      [startStr, endStr],
+    );
+    return (result.first['total'] as int?) ?? 0;
+  }
+
+  /// Get total expense for a specific period
+  Future<int> getTotalExpenseForPeriod({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+
+    if (startDate == null || endDate == null) {
+      final result = await db.rawQuery(
+        'SELECT COALESCE(SUM(amount), 0) as total FROM expenses',
+      );
+      return (result.first['total'] as int?) ?? 0;
+    }
+
+    final startStr = startDate.toIso8601String();
+    final endStr = endDate.toIso8601String();
+
+    final result = await db.rawQuery(
+      'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE date >= ? AND date <= ?',
+      [startStr, endStr],
+    );
+    return (result.first['total'] as int?) ?? 0;
+  }
+
+  /// Get incomes for a specific period
+  Future<List<Income>> getIncomesForPeriod({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+
+    if (startDate == null || endDate == null) {
+      final maps = await db.query('incomes', orderBy: 'date DESC');
+      return maps.map((m) => Income.fromMap(m)).toList();
+    }
+
+    final startStr = startDate.toIso8601String();
+    final endStr = endDate.toIso8601String();
+
+    final maps = await db.query(
+      'incomes',
+      where: 'date >= ? AND date <= ?',
+      whereArgs: [startStr, endStr],
+      orderBy: 'date DESC',
+    );
+    return maps.map((m) => Income.fromMap(m)).toList();
+  }
+
+  /// Get expenses for a specific period
+  Future<List<Expense>> getExpensesForPeriod({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+
+    if (startDate == null || endDate == null) {
+      final maps = await db.query('expenses', orderBy: 'date DESC');
+      return maps.map((m) => Expense.fromMap(m)).toList();
+    }
+
+    final startStr = startDate.toIso8601String();
+    final endStr = endDate.toIso8601String();
+
+    final maps = await db.query(
+      'expenses',
+      where: 'date >= ? AND date <= ?',
+      whereArgs: [startStr, endStr],
+      orderBy: 'date DESC',
+    );
+    return maps.map((m) => Expense.fromMap(m)).toList();
   }
 }

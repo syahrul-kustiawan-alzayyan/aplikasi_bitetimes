@@ -14,18 +14,34 @@ class PengeluaranPage extends StatefulWidget {
   State<PengeluaranPage> createState() => _PengeluaranPageState();
 }
 
-class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAliveClientMixin {
+class _PengeluaranPageState extends State<PengeluaranPage>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   String _selectedCategory = 'Lainnya';
-  final List<String> _expenseCategories = ['Bahan Baku', 'Gaji Kasir', 'Operasional', 'Listrik', 'Lainnya'];
+  final List<String> _expenseCategories = [
+    'Bahan Baku',
+    'Gaji Kasir',
+    'Operasional',
+    'Listrik',
+    'Lainnya',
+  ];
 
   List<Expense> _expenses = [];
-  int _totalExpenseThisMonth = 0;
+  int _totalExpense = 0;
+  int _prevTotalExpense = 0;
   bool _isLoading = true;
+  String _selectedFilter = 'Semua Waktu';
+  final List<String> _filterOptions = [
+    'Hari Ini',
+    'Minggu Ini',
+    'Bulan Ini',
+    'Tahun Ini',
+    'Semua Waktu',
+  ];
 
   @override
   void initState() {
@@ -44,17 +60,58 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    
-    final expenses = await DatabaseHelper().getExpenses();
-    
+
+    final dbHelper = DatabaseHelper();
+    DateTime? startDate;
+    DateTime? endDate;
+    final now = DateTime.now();
+
+    if (_selectedFilter == 'Hari Ini') {
+      startDate = DateTime(now.year, now.month, now.day);
+      endDate = now;
+    } else if (_selectedFilter == 'Minggu Ini') {
+      DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      startDate = DateTime(
+        startOfWeek.year,
+        startOfWeek.month,
+        startOfWeek.day,
+      );
+      endDate = now;
+    } else if (_selectedFilter == 'Bulan Ini') {
+      startDate = DateTime(now.year, now.month, 1);
+      endDate = now;
+    } else if (_selectedFilter == 'Tahun Ini') {
+      startDate = DateTime(now.year, 1, 1);
+      endDate = now;
+    }
+
+    final expenses = await dbHelper.getExpensesForPeriod(
+      startDate: startDate,
+      endDate: endDate,
+    );
+
+    // Get previous period data
+    final prevStartDate = dbHelper.getPreviousPeriodStartDate(startDate);
+    final prevEndDate = dbHelper.getPreviousPeriodEndDate(startDate);
+    final prevExpenses = await dbHelper.getExpensesForPeriod(
+      startDate: prevStartDate,
+      endDate: prevEndDate,
+    );
+
     int total = 0;
     for (var exp in expenses) {
       total += exp.amount;
     }
 
+    int prevTotal = 0;
+    for (var exp in prevExpenses) {
+      prevTotal += exp.amount;
+    }
+
     setState(() {
       _expenses = expenses;
-      _totalExpenseThisMonth = total;
+      _totalExpense = total;
+      _prevTotalExpense = prevTotal;
       _isLoading = false;
     });
   }
@@ -86,7 +143,11 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
   }
 
   String _formatCurrency(int amount) {
-    return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(amount);
+    return NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    ).format(amount);
   }
 
   String _formatDate(String isoString) {
@@ -123,7 +184,10 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
     FocusScope.of(context).unfocus();
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pengeluaran berhasil dicatat'), backgroundColor: Colors.green),
+      const SnackBar(
+        content: Text('Pengeluaran berhasil dicatat'),
+        backgroundColor: Colors.green,
+      ),
     );
 
     _loadData();
@@ -144,8 +208,98 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 8),
-                // KPI Card
-                _buildKpiCard(),
+                // Filter Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'TOTAL PENGELUARAN',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.onSurfaceVariant,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      initialValue: _selectedFilter,
+                      onSelected: (String newValue) {
+                        setState(() {
+                          _selectedFilter = newValue;
+                        });
+                        _loadData();
+                      },
+                      itemBuilder: (BuildContext context) {
+                        return _filterOptions.map((String choice) {
+                          return PopupMenuItem<String>(
+                            value: choice,
+                            child: Text(choice),
+                          );
+                        }).toList();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(9999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _selectedFilter,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.expand_more,
+                              size: 16,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      'Rp ',
+                      style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.error,
+                      ),
+                    ),
+                    Text(
+                      NumberFormat('#,###', 'id_ID').format(_totalExpense),
+                      style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontSize: 40,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface,
+                        letterSpacing: -1,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (_selectedFilter != 'Semua Waktu')
+                  _buildComparisonBadge(_totalExpense, _prevTotalExpense)
+                else
+                  const SizedBox(height: 8),
                 const SizedBox(height: 24),
 
                 // Form Section
@@ -162,46 +316,84 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
     );
   }
 
-  Widget _buildKpiCard() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'TOTAL PENGELUARAN',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: AppTheme.onSurfaceVariant,
-            letterSpacing: 1.5,
+  Widget _buildComparisonBadge(int current, int previous) {
+    final percent = previous > 0
+        ? ((current - previous) / previous * 100)
+        : (current > 0 ? 100.0 : 0.0);
+    final isPositive = percent > 0;
+    final isZero = percent == 0;
+
+    // Colors with high contrast
+    // For expenses: lower is better, so green for negative/trending down
+    final positiveColor = const Color(0xFFC62828); // Red for increase (bad)
+    final negativeColor = const Color(0xFF2E7D32); // Green for decrease (good)
+    final neutralColor = const Color(0xFF9E9E9E); // Gray for no change
+
+    Color badgeColor;
+    IconData badgeIcon;
+
+    if (isZero) {
+      badgeColor = neutralColor;
+      badgeIcon = Icons.remove;
+    } else if (isPositive) {
+      // Expense increased - bad - show red
+      badgeColor = positiveColor;
+      badgeIcon = Icons.trending_up;
+    } else {
+      // Expense decreased - good - show green
+      badgeColor = negativeColor;
+      badgeIcon = Icons.trending_down;
+    }
+
+    // Format the percentage text
+    String percentText;
+    if (isZero) {
+      percentText = '0%';
+    } else {
+      final sign = isPositive ? '+' : '-';
+      final absPercent = percent.abs().toStringAsFixed(1);
+      percentText = '$sign$absPercent%';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9999),
+        border: Border.all(color: badgeColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
-        ),
-        const SizedBox(height: 4),
-        RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: 'Rp ',
-                style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.error,
-                ),
-              ),
-              TextSpan(
-                text: NumberFormat('#,###', 'id_ID').format(_totalExpenseThisMonth),
-                style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
-                  fontSize: 40,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.onSurface,
-                  letterSpacing: -1,
-                ),
-              ),
-            ],
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(badgeIcon, size: 14, color: badgeColor),
+          const SizedBox(width: 6),
+          Text(
+            percentText,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: badgeColor,
+              fontFamily: 'Plus Jakarta Sans',
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 4),
+          Text(
+            'vs periode lalu',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -243,7 +435,9 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
+            border: Border.all(
+              color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,11 +451,16 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
                   onTap: () => _selectDate(context),
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
+                      border: Border.all(
+                        color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -273,7 +472,11 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
                           ),
                         ),
                         const Spacer(),
-                        Icon(Icons.calendar_today, size: 16, color: AppTheme.onSurfaceVariant),
+                        Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: AppTheme.onSurfaceVariant,
+                        ),
                       ],
                     ),
                   ),
@@ -285,7 +488,10 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
               _fieldLabel('NOMINAL RP'),
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(16),
@@ -315,17 +521,26 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
               _fieldLabel('KATEGORI'),
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 2,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
+                  border: Border.all(
+                    color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+                  ),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedCategory,
                     isExpanded: true,
-                    icon: Icon(Icons.expand_more, size: 20, color: AppTheme.onSurfaceVariant),
+                    icon: Icon(
+                      Icons.expand_more,
+                      size: 20,
+                      color: AppTheme.onSurfaceVariant,
+                    ),
                     style: TextStyle(
                       fontWeight: FontWeight.w500,
                       color: AppTheme.onSurface,
@@ -337,7 +552,9 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
                         });
                       }
                     },
-                    items: _expenseCategories.map<DropdownMenuItem<String>>((String value) {
+                    items: _expenseCategories.map<DropdownMenuItem<String>>((
+                      String value,
+                    ) {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Text(value),
@@ -352,7 +569,10 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
               _fieldLabel('KETERANGAN'),
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 height: 80,
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceContainerHighest,
@@ -470,9 +690,19 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
         const SizedBox(height: 8),
 
         if (_isLoading)
-          const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(),
+            ),
+          )
         else if (_expenses.isEmpty)
-          const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Belum ada riwayat pengeluaran.')))
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('Belum ada riwayat pengeluaran.'),
+            ),
+          )
         else
           ListView.separated(
             shrinkWrap: true,
@@ -480,7 +710,8 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
             itemCount: _expenses.length,
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              final exp = _expenses[_expenses.length - 1 - index]; // Newest first
+              final exp =
+                  _expenses[_expenses.length - 1 - index]; // Newest first
               return _expenseItem(
                 icon: Icons.receipt_long_outlined,
                 title: exp.description,
@@ -528,7 +759,9 @@ class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAli
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
+        border: Border.all(
+          color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+        ),
       ),
       child: Row(
         children: [

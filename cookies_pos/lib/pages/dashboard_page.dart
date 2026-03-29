@@ -13,7 +13,8 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveClientMixin {
+class _DashboardPageState extends State<DashboardPage>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
   int _totalSold = 0;
@@ -26,7 +27,19 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
   List<String> _chartLabels = [];
   bool _isLoading = true;
   String _selectedFilter = 'Semua Waktu';
-  final List<String> _filterOptions = ['Hari Ini', 'Minggu Ini', 'Bulan Ini', 'Tahun Ini', 'Semua Waktu'];
+  final List<String> _filterOptions = [
+    'Hari Ini',
+    'Minggu Ini',
+    'Bulan Ini',
+    'Tahun Ini',
+    'Semua Waktu',
+  ];
+
+  // Previous period data for comparison
+  int _prevTotalSold = 0;
+  int _prevTotalIncome = 0;
+  int _prevTotalExpense = 0;
+  int _prevProfit = 0;
 
   @override
   void initState() {
@@ -44,14 +57,18 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final dbHelper = DatabaseHelper();
-    
+
     DateTime? startDate;
     final now = DateTime.now();
     if (_selectedFilter == 'Hari Ini') {
       startDate = DateTime(now.year, now.month, now.day);
     } else if (_selectedFilter == 'Minggu Ini') {
       DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-      startDate = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+      startDate = DateTime(
+        startOfWeek.year,
+        startOfWeek.month,
+        startOfWeek.day,
+      );
     } else if (_selectedFilter == 'Bulan Ini') {
       startDate = DateTime(now.year, now.month, 1);
     } else if (_selectedFilter == 'Tahun Ini') {
@@ -62,6 +79,14 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
     final variantSales = await dbHelper.getVariantSales(startDate: startDate);
     final chartData = await dbHelper.getDynamicChartData(startDate: startDate);
 
+    // Get previous period data for comparison
+    final prevStartDate = dbHelper.getPreviousPeriodStartDate(startDate);
+    final prevEndDate = dbHelper.getPreviousPeriodEndDate(startDate);
+    final prevStats = await dbHelper.getPreviousPeriodDashboardStats(
+      previousStartDate: prevStartDate,
+      previousEndDate: prevEndDate,
+    );
+
     setState(() {
       _totalSold = stats['totalSold'] ?? 0;
       _totalIncome = stats['totalIncome'] ?? 0;
@@ -71,12 +96,20 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
       _incomeSpots = chartData['income'] ?? [];
       _expenseSpots = chartData['expense'] ?? [];
       _chartLabels = chartData['labels'] ?? [];
+      _prevTotalSold = prevStats['totalSold'] ?? 0;
+      _prevTotalIncome = prevStats['totalIncome'] ?? 0;
+      _prevTotalExpense = prevStats['totalExpense'] ?? 0;
+      _prevProfit = prevStats['profit'] ?? 0;
       _isLoading = false;
     });
   }
 
   String _formatCurrency(int amount) {
-    return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(amount);
+    return NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    ).format(amount);
   }
 
   @override
@@ -124,7 +157,10 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                         }).toList();
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.surfaceContainerLow,
                           borderRadius: BorderRadius.circular(9999),
@@ -141,7 +177,11 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                               ),
                             ),
                             const SizedBox(width: 4),
-                            Icon(Icons.expand_more, size: 16, color: AppTheme.onSurfaceVariant),
+                            Icon(
+                              Icons.expand_more,
+                              size: 16,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
                           ],
                         ),
                       ),
@@ -167,7 +207,7 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                   // Penjualan per Varian
                   _buildPenjualanPerVarian(),
                   const SizedBox(height: 16),
-                ]
+                ],
               ],
             ),
           ),
@@ -177,6 +217,22 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
   }
 
   Widget _buildKpiGrid() {
+    // Calculate percentage changes
+    final soldChange = _prevTotalSold > 0
+        ? ((_totalSold - _prevTotalSold) / _prevTotalSold * 100)
+        : (_totalSold > 0 ? 100.0 : 0.0);
+    final incomeChange = _prevTotalIncome > 0
+        ? ((_totalIncome - _prevTotalIncome) / _prevTotalIncome * 100)
+        : (_totalIncome > 0 ? 100.0 : 0.0);
+    final expenseChange = _prevTotalExpense > 0
+        ? ((_totalExpense - _prevTotalExpense) / _prevTotalExpense * 100)
+        : (_totalExpense > 0 ? 100.0 : 0.0);
+    final profitChange = _prevProfit > 0
+        ? ((_profit - _prevProfit) / _prevProfit * 100)
+        : (_profit > 0 ? 100.0 : 0.0);
+
+    final isFilterAllTime = _selectedFilter == 'Semua Waktu';
+
     return Column(
       children: [
         Row(
@@ -190,6 +246,11 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                 suffix: 'pcs',
                 colors: [const Color(0xFFD6BEA8), const Color(0xFFC4A88E)],
                 icon: Icons.shopping_bag_outlined,
+                badgeText: isFilterAllTime
+                    ? null
+                    : _formatChangePercent(soldChange),
+                changePercent: isFilterAllTime ? 0 : soldChange,
+                showComparison: !isFilterAllTime,
               ),
             ),
             const SizedBox(width: 12),
@@ -201,6 +262,11 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                 value: _formatCurrency(_totalIncome),
                 colors: [const Color(0xFFEAC295), const Color(0xFFDEB079)],
                 icon: Icons.account_balance_wallet_outlined,
+                badgeText: isFilterAllTime
+                    ? null
+                    : _formatChangePercent(incomeChange),
+                changePercent: isFilterAllTime ? 0 : incomeChange,
+                showComparison: !isFilterAllTime,
               ),
             ),
           ],
@@ -216,6 +282,11 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                 value: _formatCurrency(_totalExpense),
                 colors: [const Color(0xFFCF9A69), const Color(0xFFC08552)],
                 icon: Icons.money_off_csred_outlined,
+                badgeText: isFilterAllTime
+                    ? null
+                    : _formatChangePercent(expenseChange),
+                changePercent: isFilterAllTime ? 0 : expenseChange,
+                showComparison: !isFilterAllTime,
               ),
             ),
             const SizedBox(width: 12),
@@ -227,12 +298,23 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                 value: _formatCurrency(_profit),
                 colors: [const Color(0xFF967054), const Color(0xFF7A563F)],
                 icon: Icons.stars,
+                badgeText: isFilterAllTime
+                    ? null
+                    : _formatChangePercent(profitChange),
+                changePercent: isFilterAllTime ? 0 : profitChange,
+                showComparison: !isFilterAllTime,
               ),
             ),
           ],
         ),
       ],
     );
+  }
+
+  String _formatChangePercent(double percent) {
+    if (percent == 0) return '0%';
+    final sign = percent > 0 ? '+' : '';
+    return '$sign${percent.toStringAsFixed(1)}%';
   }
 
   Widget _buildGradientCard({
@@ -243,9 +325,11 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
     required List<Color> colors,
     required IconData icon,
     String? badgeText,
+    double changePercent = 0,
+    bool showComparison = false,
   }) {
     return Container(
-      height: 140,
+      height: 160,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -290,7 +374,11 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                         letterSpacing: 2,
                       ),
                     ),
-                    Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.8)),
+                    Icon(
+                      icon,
+                      size: 16,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
                   ],
                 ),
                 Column(
@@ -336,41 +424,95 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                     ),
                   ],
                 ),
-          if (badgeText != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(9999),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.stars, size: 12, color: Colors.white),
-                  const SizedBox(width: 4),
-                  Text(
-                    badgeText,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            const SizedBox(height: 18), // Spacer to balance height
+                if (showComparison)
+                  _buildComparisonBadge(changePercent)
+                else
+                  const SizedBox(height: 18), // Spacer to balance height
+              ],
+            ),
+          ),
         ],
       ),
-    ),
-  ],
-),
-);
-}
+    );
+  }
+
+  Widget _buildComparisonBadge(double changePercent) {
+    // Determine if positive or negative change
+    final isPositive = changePercent > 0;
+    final isZero = changePercent == 0;
+
+    // Colors with high contrast
+    final positiveColor = const Color(
+      0xFF2E7D32,
+    ); // Dark green for better contrast
+    final negativeColor = const Color(
+      0xFFC62828,
+    ); // Dark red for better contrast
+    final neutralColor = const Color(0xFF9E9E9E); // Gray for no change
+
+    // Select color based on change
+    Color badgeColor;
+    IconData badgeIcon;
+
+    if (isZero) {
+      badgeColor = neutralColor;
+      badgeIcon = Icons.remove;
+    } else if (isPositive) {
+      badgeColor = positiveColor;
+      badgeIcon = Icons.trending_up;
+    } else {
+      badgeColor = negativeColor;
+      badgeIcon = Icons.trending_down;
+    }
+
+    // Format the percentage text
+    String percentText;
+    if (isZero) {
+      percentText = '0%';
+    } else {
+      final sign = isPositive ? '+' : '-';
+      final absPercent = changePercent.abs().toStringAsFixed(1);
+      percentText = '$sign$absPercent%';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white, // White background for maximum contrast
+        borderRadius: BorderRadius.circular(9999),
+        border: Border.all(color: badgeColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(badgeIcon, size: 12, color: badgeColor),
+          const SizedBox(width: 5),
+          Text(
+            percentText,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: badgeColor,
+              fontFamily: 'Plus Jakarta Sans',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   List<FlSpot> _getSpots(List<double> data) {
-    return List.generate(data.length, (index) => FlSpot(index.toDouble(), data[index] / 1000000));
+    return List.generate(
+      data.length,
+      (index) => FlSpot(index.toDouble(), data[index] / 1000000),
+    );
   }
 
   Widget _buildTrenKeuangan() {
@@ -381,10 +523,10 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
     for (var v in _expenseSpots) {
       if (v > maxVal) maxVal = v;
     }
-    
+
     double maxYChart = maxVal / 1000000;
     if (maxYChart < 1) maxYChart = 1;
-    
+
     double interval = (maxYChart / 4).ceilToDouble();
     if (interval < 1) interval = 1;
 
@@ -393,7 +535,7 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest, 
+        color: AppTheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: AppTheme.outlineVariant.withValues(alpha: 0.2),
@@ -431,7 +573,8 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                 maxY: calculatedMaxY > 0 ? calculatedMaxY : 1,
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (touchedSpot) => AppTheme.surfaceContainerHighest,
+                    getTooltipColor: (touchedSpot) =>
+                        AppTheme.surfaceContainerHighest,
                     getTooltipItems: (touchedSpots) {
                       return touchedSpots.map((spot) {
                         final value = spot.y * 1000000;
@@ -460,8 +603,12 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                   },
                 ),
                 titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
@@ -474,7 +621,9 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              color: AppTheme.onSurfaceVariant.withValues(
+                                alpha: 0.7,
+                              ),
                             ),
                             textAlign: TextAlign.right,
                           ),
@@ -486,7 +635,8 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        if (value.toInt() >= 0 && value.toInt() < _chartLabels.length) {
+                        if (value.toInt() >= 0 &&
+                            value.toInt() < _chartLabels.length) {
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: Text(
@@ -494,7 +644,9 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                color: AppTheme.onSurfaceVariant.withValues(
+                                  alpha: 0.7,
+                                ),
                               ),
                             ),
                           );
@@ -515,12 +667,13 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                     barWidth: 3,
                     dotData: FlDotData(
                       show: true,
-                      getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                        radius: 4,
-                        color: AppTheme.surfaceContainerLowest,
-                        strokeWidth: 2,
-                        strokeColor: AppTheme.tertiary,
-                      ),
+                      getDotPainter: (spot, percent, barData, index) =>
+                          FlDotCirclePainter(
+                            radius: 4,
+                            color: AppTheme.surfaceContainerLowest,
+                            strokeWidth: 2,
+                            strokeColor: AppTheme.tertiary,
+                          ),
                     ),
                     belowBarData: BarAreaData(
                       show: true,
@@ -535,12 +688,13 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
                     barWidth: 3,
                     dotData: FlDotData(
                       show: true,
-                      getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                        radius: 4,
-                        color: AppTheme.surfaceContainerLowest,
-                        strokeWidth: 2,
-                        strokeColor: AppTheme.error,
-                      ),
+                      getDotPainter: (spot, percent, barData, index) =>
+                          FlDotCirclePainter(
+                            radius: 4,
+                            color: AppTheme.surfaceContainerLowest,
+                            strokeWidth: 2,
+                            strokeColor: AppTheme.error,
+                          ),
                     ),
                     belowBarData: BarAreaData(
                       show: true,
@@ -596,7 +750,7 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
 
     // Map variant sales to bars
     int maxSale = _variantSales.values.reduce((a, b) => a > b ? a : b);
-    
+
     // Fallback colors for variations
     final colors = [
       const Color(0xFF564338),
@@ -640,9 +794,7 @@ class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveCl
               color: AppTheme.outlineVariant.withValues(alpha: 0.1),
             ),
           ),
-          child: Column(
-            children: bars,
-          ),
+          child: Column(children: bars),
         ),
       ],
     );

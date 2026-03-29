@@ -14,7 +14,8 @@ class PemasukanPage extends StatefulWidget {
   State<PemasukanPage> createState() => _PemasukanPageState();
 }
 
-class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveClientMixin {
+class _PemasukanPageState extends State<PemasukanPage>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
   final TextEditingController _amountController = TextEditingController();
@@ -22,10 +23,19 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
   DateTime _selectedDate = DateTime.now();
   String _selectedSource = 'Lainnya';
   final List<String> _incomeSources = ['Modal', 'Sponsorship', 'Lainnya'];
-  
+
   List<Income> _incomes = [];
-  int _totalIncomeThisMonth = 0;
+  int _totalIncome = 0;
+  int _prevTotalIncome = 0;
   bool _isLoading = true;
+  String _selectedFilter = 'Semua Waktu';
+  final List<String> _filterOptions = [
+    'Hari Ini',
+    'Minggu Ini',
+    'Bulan Ini',
+    'Tahun Ini',
+    'Semua Waktu',
+  ];
 
   @override
   void initState() {
@@ -44,17 +54,58 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    
-    final incomes = await DatabaseHelper().getIncomes();
-    
+
+    final dbHelper = DatabaseHelper();
+    DateTime? startDate;
+    DateTime? endDate;
+    final now = DateTime.now();
+
+    if (_selectedFilter == 'Hari Ini') {
+      startDate = DateTime(now.year, now.month, now.day);
+      endDate = now;
+    } else if (_selectedFilter == 'Minggu Ini') {
+      DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      startDate = DateTime(
+        startOfWeek.year,
+        startOfWeek.month,
+        startOfWeek.day,
+      );
+      endDate = now;
+    } else if (_selectedFilter == 'Bulan Ini') {
+      startDate = DateTime(now.year, now.month, 1);
+      endDate = now;
+    } else if (_selectedFilter == 'Tahun Ini') {
+      startDate = DateTime(now.year, 1, 1);
+      endDate = now;
+    }
+
+    final incomes = await dbHelper.getIncomesForPeriod(
+      startDate: startDate,
+      endDate: endDate,
+    );
+
+    // Get previous period data
+    final prevStartDate = dbHelper.getPreviousPeriodStartDate(startDate);
+    final prevEndDate = dbHelper.getPreviousPeriodEndDate(startDate);
+    final prevIncomes = await dbHelper.getIncomesForPeriod(
+      startDate: prevStartDate,
+      endDate: prevEndDate,
+    );
+
     int total = 0;
     for (var inc in incomes) {
       total += inc.amount;
     }
 
+    int prevTotal = 0;
+    for (var inc in prevIncomes) {
+      prevTotal += inc.amount;
+    }
+
     setState(() {
       _incomes = incomes;
-      _totalIncomeThisMonth = total;
+      _totalIncome = total;
+      _prevTotalIncome = prevTotal;
       _isLoading = false;
     });
   }
@@ -86,7 +137,11 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
   }
 
   String _formatCurrency(int amount) {
-    return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(amount);
+    return NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    ).format(amount);
   }
 
   String _formatDate(String isoString) {
@@ -123,7 +178,10 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
     FocusScope.of(context).unfocus();
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pemasukan berhasil dicatat'), backgroundColor: Colors.green),
+      const SnackBar(
+        content: Text('Pemasukan berhasil dicatat'),
+        backgroundColor: Colors.green,
+      ),
     );
 
     _loadData();
@@ -144,42 +202,98 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 8),
-                // Hero Balance
-                Text(
-                  'TOTAL PEMASUKAN',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.onSurfaceVariant,
-                    letterSpacing: 1.5,
-                  ),
+                // Filter Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'TOTAL PEMASUKAN',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.onSurfaceVariant,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      initialValue: _selectedFilter,
+                      onSelected: (String newValue) {
+                        setState(() {
+                          _selectedFilter = newValue;
+                        });
+                        _loadData();
+                      },
+                      itemBuilder: (BuildContext context) {
+                        return _filterOptions.map((String choice) {
+                          return PopupMenuItem<String>(
+                            value: choice,
+                            child: Text(choice),
+                          );
+                        }).toList();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(9999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _selectedFilter,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.expand_more,
+                              size: 16,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: 'Rp ',
-                        style: TextStyle(
-                          fontFamily: 'Plus Jakarta Sans',
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primary,
-                        ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      'Rp ',
+                      style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primary,
                       ),
-                      TextSpan(
-                        text: NumberFormat('#,###', 'id_ID').format(_totalIncomeThisMonth),
-                        style: TextStyle(
-                          fontFamily: 'Plus Jakarta Sans',
-                          fontSize: 40,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.onSurface,
-                          letterSpacing: -1,
-                        ),
+                    ),
+                    Text(
+                      NumberFormat('#,###', 'id_ID').format(_totalIncome),
+                      style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontSize: 40,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.onSurface,
+                        letterSpacing: -1,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 8),
+                if (_selectedFilter != 'Semua Waktu')
+                  _buildComparisonBadge(_totalIncome, _prevTotalIncome)
+                else
+                  const SizedBox(height: 8),
                 const SizedBox(height: 24),
 
                 // Form Card
@@ -189,6 +303,88 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
                 // Riwayat Pemasukan
                 _buildRiwayat(),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComparisonBadge(int current, int previous) {
+    final percent = previous > 0
+        ? ((current - previous) / previous * 100)
+        : (current > 0 ? 100.0 : 0.0);
+    final isPositive = percent > 0;
+    final isZero = percent == 0;
+
+    // Colors with high contrast
+    final positiveColor = const Color(
+      0xFF2E7D32,
+    ); // Dark green for better visibility
+    final negativeColor = const Color(
+      0xFFC62828,
+    ); // Dark red for better visibility
+    final neutralColor = const Color(0xFF9E9E9E); // Gray for no change
+
+    Color badgeColor;
+    IconData badgeIcon;
+
+    if (isZero) {
+      badgeColor = neutralColor;
+      badgeIcon = Icons.remove;
+    } else if (isPositive) {
+      badgeColor = positiveColor;
+      badgeIcon = Icons.trending_up;
+    } else {
+      badgeColor = negativeColor;
+      badgeIcon = Icons.trending_down;
+    }
+
+    // Format the percentage text
+    String percentText;
+    if (isZero) {
+      percentText = '0%';
+    } else {
+      final sign = isPositive ? '+' : '-';
+      final absPercent = percent.abs().toStringAsFixed(1);
+      percentText = '$sign$absPercent%';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9999),
+        border: Border.all(color: badgeColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(badgeIcon, size: 14, color: badgeColor),
+          const SizedBox(width: 6),
+          Text(
+            percentText,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: badgeColor,
+              fontFamily: 'Plus Jakarta Sans',
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'vs periode lalu',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -299,11 +495,18 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
                         onTap: () => _selectDate(context),
                         borderRadius: BorderRadius.circular(16),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
+                            border: Border.all(
+                              color: AppTheme.outlineVariant.withValues(
+                                alpha: 0.1,
+                              ),
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -316,7 +519,11 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
                                 ),
                               ),
                               const Spacer(),
-                              Icon(Icons.calendar_today, size: 16, color: AppTheme.onSurfaceVariant),
+                              Icon(
+                                Icons.calendar_today,
+                                size: 16,
+                                color: AppTheme.onSurfaceVariant,
+                              ),
                             ],
                           ),
                         ),
@@ -333,17 +540,26 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
                     _fieldLabel('SUMBER'),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
+                        border: Border.all(
+                          color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+                        ),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _selectedSource,
                           isExpanded: true,
-                          icon: Icon(Icons.expand_more, size: 20, color: AppTheme.onSurfaceVariant),
+                          icon: Icon(
+                            Icons.expand_more,
+                            size: 20,
+                            color: AppTheme.onSurfaceVariant,
+                          ),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -356,7 +572,9 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
                               });
                             }
                           },
-                          items: _incomeSources.map<DropdownMenuItem<String>>((String value) {
+                          items: _incomeSources.map<DropdownMenuItem<String>>((
+                            String value,
+                          ) {
                             return DropdownMenuItem<String>(
                               value: value,
                               child: Text(value),
@@ -498,9 +716,19 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
         const SizedBox(height: 16),
 
         if (_isLoading)
-          const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(),
+            ),
+          )
         else if (_incomes.isEmpty)
-          const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('Belum ada riwayat pemasukan.')))
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('Belum ada riwayat pemasukan.'),
+            ),
+          )
         else
           ListView.separated(
             shrinkWrap: true,
@@ -508,11 +736,18 @@ class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveCl
             itemCount: _incomes.length,
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              final inc = _incomes[_incomes.length - 1 - index]; // Reverse list to show newest first
+              final inc =
+                  _incomes[_incomes.length -
+                      1 -
+                      index]; // Reverse list to show newest first
               final isManual = inc.source != 'Penjualan POS';
               return _transactionItem(
                 icon: isManual ? Icons.handshake : Icons.point_of_sale,
-                iconBgColor: (isManual ? AppTheme.primaryFixedDim : AppTheme.secondaryContainer).withValues(alpha: 0.2),
+                iconBgColor:
+                    (isManual
+                            ? AppTheme.primaryFixedDim
+                            : AppTheme.secondaryContainer)
+                        .withValues(alpha: 0.2),
                 iconColor: isManual ? AppTheme.primary : AppTheme.secondary,
                 title: inc.source,
                 description: inc.description,
