@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -510,13 +511,15 @@ class _DashboardPageState extends State<DashboardPage>
   }
 
   List<FlSpot> _getSpots(List<double> data) {
+    // Keep data as-is (actual values in Rupiah)
     return List.generate(
       data.length,
-      (index) => FlSpot(index.toDouble(), data[index] / 1000000),
+      (index) => FlSpot(index.toDouble(), data[index]),
     );
   }
 
   Widget _buildTrenKeuangan() {
+    // Find the maximum value from both income and expense spots (actual Rupiah values)
     double maxVal = 0;
     for (var v in _incomeSpots) {
       if (v > maxVal) maxVal = v;
@@ -525,13 +528,73 @@ class _DashboardPageState extends State<DashboardPage>
       if (v > maxVal) maxVal = v;
     }
 
-    double maxYChart = maxVal / 1000000;
-    if (maxYChart < 1) maxYChart = 1;
+    // Calculate dynamic Y-axis with nice round numbers (in Rupiah)
+    double calculatedMaxY;
+    double interval;
 
-    double interval = (maxYChart / 4).ceilToDouble();
-    if (interval < 1) interval = 1;
+    // Minimum Y-axis is 200rb (200,000)
+    final minValue = 200000.0;
 
-    double calculatedMaxY = (maxYChart / interval).ceil() * interval;
+    if (maxVal <= minValue) {
+      // Data is small or zero, use minimum
+      calculatedMaxY = minValue;
+      interval = 50000; // 50rb interval
+    } else {
+      // Add 15% padding
+      final paddedMax = maxVal * 1.15;
+
+      // Find magnitude
+      final magnitude = (log(paddedMax) / log(10)).floor();
+      final normalized = paddedMax / pow(10, magnitude);
+
+      // Round up to nearest nice number (1, 2, 5, 10)
+      double rounded;
+      if (normalized <= 1) {
+        rounded = 1;
+      } else if (normalized <= 2) {
+        rounded = 2;
+      } else if (normalized <= 5) {
+        rounded = 5;
+      } else {
+        rounded = 10;
+      }
+
+      calculatedMaxY = rounded * pow(10, magnitude);
+
+      // Ensure calculatedMaxY is at least minValue
+      if (calculatedMaxY < minValue) {
+        calculatedMaxY = minValue;
+      }
+
+      // Calculate interval (4-5 grid lines)
+      interval = calculatedMaxY / 4;
+
+      // Round interval to nice number
+      final intervalMagnitude = (log(interval) / log(10)).floor();
+      final intervalNormalized = interval / pow(10, intervalMagnitude);
+
+      double intervalRounded;
+      if (intervalNormalized <= 1) {
+        intervalRounded = 1;
+      } else if (intervalNormalized <= 2) {
+        intervalRounded = 2;
+      } else if (intervalNormalized <= 5) {
+        intervalRounded = 5;
+      } else {
+        intervalRounded = 10;
+      }
+
+      interval = intervalRounded * pow(10, intervalMagnitude);
+
+      // Recalculate maxY based on rounded interval
+      calculatedMaxY = (interval * 4).ceilToDouble();
+
+      // Ensure final maxY is at least minValue
+      if (calculatedMaxY < minValue) {
+        calculatedMaxY = minValue;
+        interval = 50000;
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -578,7 +641,7 @@ class _DashboardPageState extends State<DashboardPage>
                         AppTheme.surfaceContainerHighest,
                     getTooltipItems: (touchedSpots) {
                       return touchedSpots.map((spot) {
-                        final value = spot.y * 1000000;
+                        final value = spot.y; // Already in Rupiah
                         return LineTooltipItem(
                           _formatCurrency(value.toInt()),
                           TextStyle(
@@ -613,12 +676,24 @@ class _DashboardPageState extends State<DashboardPage>
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 45,
+                      reservedSize: 65,
                       getTitlesWidget: (value, meta) {
+                        // Format value as proper Rupiah (e.g., "Rp 200rb" for 200,000)
+                        String formattedValue;
+                        if (value >= 1000000) {
+                          formattedValue =
+                              'Rp ${(value / 1000000).toStringAsFixed(0)}jt';
+                        } else if (value >= 1000) {
+                          formattedValue =
+                              'Rp ${(value / 1000).toStringAsFixed(0)}rb';
+                        } else {
+                          formattedValue = 'Rp ${value.toInt()}';
+                        }
+
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: Text(
-                            'Rp${value.toInt()}jt',
+                            formattedValue,
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,

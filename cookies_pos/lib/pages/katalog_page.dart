@@ -21,29 +21,41 @@ class _KatalogPageState extends State<KatalogPage>
   @override
   bool get wantKeepAlive => true;
   List<Product> _products = [];
+  List<Product> _filteredProducts = [];
   bool _isLoading = true;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _stockController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   final ScrollController _scrollController = ScrollController();
 
   String? _selectedImagePath;
+  String _selectedFilter = 'Semua';
+  final List<String> _filters = [
+    'Semua',
+    'Favorit',
+    'Stok Rendah',
+    'Stok Habis',
+  ];
 
   @override
   void initState() {
     super.initState();
     _loadProducts();
     GlobalSync.instance.addListener(_loadProducts);
+    _searchController.addListener(_filterProducts);
   }
 
   @override
   void dispose() {
     GlobalSync.instance.removeListener(_loadProducts);
+    _searchController.removeListener(_filterProducts);
     _nameController.dispose();
     _priceController.dispose();
     _stockController.dispose();
+    _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -53,7 +65,32 @@ class _KatalogPageState extends State<KatalogPage>
     final products = await DatabaseHelper().getProducts();
     setState(() {
       _products = products;
+      _filteredProducts = products;
       _isLoading = false;
+    });
+  }
+
+  void _filterProducts() {
+    final query = _searchController.text.toLowerCase();
+
+    setState(() {
+      _filteredProducts = _products.where((product) {
+        // Search filter
+        final matchesSearch =
+            query.isEmpty || product.name.toLowerCase().contains(query);
+
+        // Category filter
+        bool matchesCategory = true;
+        if (_selectedFilter == 'Favorit') {
+          matchesCategory = product.isFavorite;
+        } else if (_selectedFilter == 'Stok Rendah') {
+          matchesCategory = product.stock > 0 && product.stock <= 10;
+        } else if (_selectedFilter == 'Stok Habis') {
+          matchesCategory = product.stock <= 0;
+        }
+
+        return matchesSearch && matchesCategory;
+      }).toList();
     });
   }
 
@@ -586,11 +623,44 @@ class _KatalogPageState extends State<KatalogPage>
                       child: CircularProgressIndicator(),
                     ),
                   )
-                else if (_products.isEmpty)
-                  const Center(
+                else if (_filteredProducts.isEmpty)
+                  Center(
                     child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Text("Belum ada produk. Tambahkan di bawah."),
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 64,
+                            color: AppTheme.onSurfaceVariant.withValues(
+                              alpha: 0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _searchController.text.isNotEmpty ||
+                                    _selectedFilter != 'Semua'
+                                ? 'Tidak ada produk yang ditemukan'
+                                : 'Belum ada produk. Tambahkan di bawah.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (_searchController.text.isNotEmpty ||
+                              _selectedFilter != 'Semua')
+                            TextButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _selectedFilter = 'Semua';
+                                });
+                              },
+                              child: const Text('Reset Filter'),
+                            ),
+                        ],
+                      ),
                     ),
                   )
                 else
@@ -713,46 +783,102 @@ class _KatalogPageState extends State<KatalogPage>
   }
 
   Widget _buildSearchBar() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(9999),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.search, color: AppTheme.onSurfaceVariant, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Cari cookie...',
-                      hintStyle: TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.onSurfaceVariant.withValues(alpha: 0.6),
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
+        // Search Input
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(9999),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.search, color: AppTheme.onSurfaceVariant, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Cari cookie...',
+                    hintStyle: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    ),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+              if (_searchController.text.isNotEmpty)
+                GestureDetector(
+                  onTap: () {
+                    _searchController.clear();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.onSurfaceVariant.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: AppTheme.onSurfaceVariant,
                     ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
-        const SizedBox(width: 8),
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppTheme.surfaceContainerLow,
+        const SizedBox(height: 12),
+        // Filter Chips
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _filters.map((filter) {
+              final isSelected = _selectedFilter == filter;
+              return Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(
+                    filter,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? Colors.white
+                          : AppTheme.onSurfaceVariant,
+                    ),
+                  ),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedFilter = filter;
+                    });
+                    _filterProducts();
+                  },
+                  backgroundColor: AppTheme.surfaceContainerHighest,
+                  selectedColor: AppTheme.primary,
+                  checkmarkColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9999),
+                    side: BorderSide(
+                      color: isSelected
+                          ? AppTheme.primary
+                          : AppTheme.outlineVariant.withValues(alpha: 0.3),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
-          child: Icon(Icons.tune, color: AppTheme.onSurfaceVariant, size: 20),
         ),
       ],
     );
@@ -762,10 +888,10 @@ class _KatalogPageState extends State<KatalogPage>
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _products.length,
+      itemCount: _filteredProducts.length,
       separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
-        return _productCard(_products[index]);
+        return _productCard(_filteredProducts[index]);
       },
     );
   }
