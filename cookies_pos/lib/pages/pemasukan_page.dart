@@ -4,6 +4,8 @@ import '../theme/app_theme.dart';
 import '../widgets/app_top_bar.dart';
 import '../data/database_helper.dart';
 import '../data/models.dart';
+import '../utils/global_sync.dart';
+import 'riwayat_page.dart';
 
 class PemasukanPage extends StatefulWidget {
   const PemasukanPage({super.key});
@@ -12,9 +14,14 @@ class PemasukanPage extends StatefulWidget {
   State<PemasukanPage> createState() => _PemasukanPageState();
 }
 
-class _PemasukanPageState extends State<PemasukanPage> {
+class _PemasukanPageState extends State<PemasukanPage> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  DateTime _selectedDate = DateTime.now();
+  String _selectedSource = 'Lainnya';
+  final List<String> _incomeSources = ['Modal', 'Sponsorship', 'Lainnya'];
   
   List<Income> _incomes = [];
   int _totalIncomeThisMonth = 0;
@@ -24,10 +31,12 @@ class _PemasukanPageState extends State<PemasukanPage> {
   void initState() {
     super.initState();
     _loadData();
+    GlobalSync.instance.addListener(_loadData);
   }
 
   @override
   void dispose() {
+    GlobalSync.instance.removeListener(_loadData);
     _amountController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -38,14 +47,9 @@ class _PemasukanPageState extends State<PemasukanPage> {
     
     final incomes = await DatabaseHelper().getIncomes();
     
-    // Calculate total for this month
     int total = 0;
-    final now = DateTime.now();
     for (var inc in incomes) {
-      final date = DateTime.parse(inc.date);
-      if (date.year == now.year && date.month == now.month) {
-        total += inc.amount;
-      }
+      total += inc.amount;
     }
 
     setState(() {
@@ -53,6 +57,32 @@ class _PemasukanPageState extends State<PemasukanPage> {
       _totalIncomeThisMonth = total;
       _isLoading = false;
     });
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primary,
+              onPrimary: Colors.white,
+              onSurface: AppTheme.onSurface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
   }
 
   String _formatCurrency(int amount) {
@@ -78,12 +108,13 @@ class _PemasukanPageState extends State<PemasukanPage> {
 
     final income = Income(
       amount: amount,
-      date: DateTime.now().toIso8601String(),
-      source: 'Lainnya',
+      date: _selectedDate.toIso8601String(),
+      source: _selectedSource,
       description: notes.isEmpty ? 'Pemasukan Manual' : notes,
     );
 
     await DatabaseHelper().insertIncome(income);
+    GlobalSync.instance.notify();
 
     if (!mounted) return;
 
@@ -100,6 +131,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 100),
       child: Column(
@@ -114,7 +146,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                 const SizedBox(height: 8),
                 // Hero Balance
                 Text(
-                  'TOTAL PEMASUKAN BULAN INI',
+                  'TOTAL PEMASUKAN',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -168,8 +200,8 @@ class _PemasukanPageState extends State<PemasukanPage> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(32),
+        color: AppTheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: AppTheme.outlineVariant.withValues(alpha: 0.1),
         ),
@@ -177,17 +209,30 @@ class _PemasukanPageState extends State<PemasukanPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.add_circle, color: AppTheme.primary, size: 24),
-              const SizedBox(width: 8),
+              Row(
+                children: [
+                  Icon(Icons.add_circle, color: AppTheme.primary, size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tambah Pemasukan Baru',
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                      color: AppTheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
               Text(
-                'Tambah Pemasukan Baru',
+                'Catat setiap uang yang masuk ke kas hari ini.',
                 style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18,
-                  color: AppTheme.onSurface,
+                  fontSize: 12,
+                  color: AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -200,8 +245,8 @@ class _PemasukanPageState extends State<PemasukanPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
             decoration: BoxDecoration(
-              color: AppTheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(20),
+              color: AppTheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [
@@ -237,7 +282,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // Tanggal & Sumber (read-only dummy representations)
           Row(
@@ -246,27 +291,35 @@ class _PemasukanPageState extends State<PemasukanPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _fieldLabel('TANGGAL (OTOMATIS)'),
+                    _fieldLabel('TANGGAL'),
                     const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceContainerLowest,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            DateFormat('dd/MM/yyyy').format(DateTime.now()),
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.onSurface,
-                            ),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _selectDate(context),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
                           ),
-                          const Spacer(),
-                          Icon(Icons.calendar_today, size: 16, color: AppTheme.onSurfaceVariant),
-                        ],
+                          child: Row(
+                            children: [
+                              Text(
+                                DateFormat('dd/MM/yyyy').format(_selectedDate),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.onSurface,
+                                ),
+                              ),
+                              const Spacer(),
+                              Icon(Icons.calendar_today, size: 16, color: AppTheme.onSurfaceVariant),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -280,24 +333,36 @@ class _PemasukanPageState extends State<PemasukanPage> {
                     _fieldLabel('SUMBER'),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppTheme.surfaceContainerLowest,
-                        borderRadius: BorderRadius.circular(20),
+                        color: AppTheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
                       ),
-                      child: Row(
-                        children: [
-                          Text(
-                            'Lainnya', // Default for manual
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.onSurface,
-                            ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedSource,
+                          isExpanded: true,
+                          icon: Icon(Icons.expand_more, size: 20, color: AppTheme.onSurfaceVariant),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.onSurface,
                           ),
-                          const Spacer(),
-                          Icon(Icons.check, size: 16, color: AppTheme.onSurfaceVariant),
-                        ],
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              setState(() {
+                                _selectedSource = newValue;
+                              });
+                            }
+                          },
+                          items: _incomeSources.map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                        ),
                       ),
                     ),
                   ],
@@ -305,27 +370,32 @@ class _PemasukanPageState extends State<PemasukanPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // Keterangan
           _fieldLabel('KETERANGAN'),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-            height: 100,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            height: 80,
             decoration: BoxDecoration(
-              color: AppTheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(20),
+              color: AppTheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
             ),
             child: TextField(
               controller: _notesController,
               maxLines: null,
+              style: TextStyle(
+                fontFamily: 'Plus Jakarta Sans',
+                fontSize: 14,
+                color: AppTheme.onSurface,
+              ),
               decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: 'Tulis keterangan di sini...',
                 hintStyle: TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.outlineVariant.withValues(alpha: 0.8),
+                  fontFamily: 'Plus Jakarta Sans',
+                  color: AppTheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
               ),
             ),
@@ -337,8 +407,10 @@ class _PemasukanPageState extends State<PemasukanPage> {
             width: double.infinity,
             child: Container(
               decoration: BoxDecoration(
-                color: AppTheme.primary,
-                borderRadius: BorderRadius.circular(20),
+                gradient: const LinearGradient(
+                  colors: [AppTheme.primary, AppTheme.primaryContainer],
+                ),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
                     color: AppTheme.primary.withValues(alpha: 0.2),
@@ -350,7 +422,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   onTap: _saveIncome,
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
@@ -358,6 +430,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                       'Simpan Pemasukan',
                       textAlign: TextAlign.center,
                       style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
                         color: Colors.white,
@@ -374,13 +447,16 @@ class _PemasukanPageState extends State<PemasukanPage> {
   }
 
   Widget _fieldLabel(String text) {
-    return Text(
-      text,
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: AppTheme.onSurfaceVariant,
-        letterSpacing: 2,
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.onSurfaceVariant,
+          letterSpacing: 1.5,
+        ),
       ),
     );
   }
@@ -439,6 +515,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
                 iconBgColor: (isManual ? AppTheme.primaryFixedDim : AppTheme.secondaryContainer).withValues(alpha: 0.2),
                 iconColor: isManual ? AppTheme.primary : AppTheme.secondary,
                 title: inc.source,
+                description: inc.description,
                 date: _formatDate(inc.date),
                 amount: inc.amount,
                 tag: isManual ? 'MANUAL' : 'OTOMATIS',
@@ -450,7 +527,17 @@ class _PemasukanPageState extends State<PemasukanPage> {
         if (_incomes.isNotEmpty)
           Center(
             child: TextButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RiwayatPage(
+                      title: 'Semua Pemasukan',
+                      isIncome: true,
+                    ),
+                  ),
+                );
+              },
               child: Text(
                 'Lihat Semua Riwayat',
                 style: TextStyle(
@@ -469,6 +556,7 @@ class _PemasukanPageState extends State<PemasukanPage> {
     required Color iconBgColor,
     required Color iconColor,
     required String title,
+    String? description,
     required String date,
     required int amount,
     required String tag,
@@ -503,6 +591,20 @@ class _PemasukanPageState extends State<PemasukanPage> {
                     color: AppTheme.onSurface,
                   ),
                 ),
+                if (description != null && description.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2, bottom: 2),
+                    child: Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.onSurfaceVariant.withValues(alpha: 0.8),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 Text(
                   date,
                   style: TextStyle(

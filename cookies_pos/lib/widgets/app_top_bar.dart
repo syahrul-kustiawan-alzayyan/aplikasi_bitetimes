@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../utils/global_sync.dart';
 
 class AppTopBar extends StatelessWidget {
   final String title;
@@ -23,14 +24,19 @@ class AppTopBar extends StatelessWidget {
                 width: 2,
               ),
             ),
-            child: ClipOval(
-              child: Image.asset(
-                'lib/src/logo.png',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Icon(
-                  Icons.cookie,
-                  color: AppTheme.primary.withValues(alpha: 0.6),
-                  size: 24,
+            child: GestureDetector(
+              onTap: () {
+                GlobalSync.instance.notify();
+              },
+              child: ClipOval(
+                child: Image.asset(
+                  'lib/src/logo.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.cookie,
+                    color: AppTheme.primary.withValues(alpha: 0.6),
+                    size: 24,
+                  ),
                 ),
               ),
             ),

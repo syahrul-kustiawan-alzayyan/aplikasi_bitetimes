@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_top_bar.dart';
 import '../data/database_helper.dart';
+import '../utils/global_sync.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -12,26 +13,54 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardPageState extends State<DashboardPage> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   int _totalSold = 0;
   int _totalIncome = 0;
   int _totalExpense = 0;
   int _profit = 0;
   Map<String, int> _variantSales = {};
+  List<double> _incomeSpots = [];
+  List<double> _expenseSpots = [];
+  List<String> _chartLabels = [];
   bool _isLoading = true;
+  String _selectedFilter = 'Semua Waktu';
+  final List<String> _filterOptions = ['Hari Ini', 'Minggu Ini', 'Bulan Ini', 'Tahun Ini', 'Semua Waktu'];
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    GlobalSync.instance.addListener(_loadData);
+  }
+
+  @override
+  void dispose() {
+    GlobalSync.instance.removeListener(_loadData);
+    super.dispose();
   }
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final dbHelper = DatabaseHelper();
     
-    final stats = await dbHelper.getDashboardStats();
-    final variantSales = await dbHelper.getVariantSales();
+    DateTime? startDate;
+    final now = DateTime.now();
+    if (_selectedFilter == 'Hari Ini') {
+      startDate = DateTime(now.year, now.month, now.day);
+    } else if (_selectedFilter == 'Minggu Ini') {
+      DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      startDate = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+    } else if (_selectedFilter == 'Bulan Ini') {
+      startDate = DateTime(now.year, now.month, 1);
+    } else if (_selectedFilter == 'Tahun Ini') {
+      startDate = DateTime(now.year, 1, 1);
+    }
+
+    final stats = await dbHelper.getDashboardStats(startDate: startDate);
+    final variantSales = await dbHelper.getVariantSales(startDate: startDate);
+    final chartData = await dbHelper.getDynamicChartData(startDate: startDate);
 
     setState(() {
       _totalSold = stats['totalSold'] ?? 0;
@@ -39,6 +68,9 @@ class _DashboardPageState extends State<DashboardPage> {
       _totalExpense = stats['totalExpense'] ?? 0;
       _profit = stats['profit'] ?? 0;
       _variantSales = variantSales;
+      _incomeSpots = chartData['income'] ?? [];
+      _expenseSpots = chartData['expense'] ?? [];
+      _chartLabels = chartData['labels'] ?? [];
       _isLoading = false;
     });
   }
@@ -49,6 +81,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 100),
       child: Column(
@@ -74,26 +107,43 @@ class _DashboardPageState extends State<DashboardPage> {
                         color: AppTheme.onSurface,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(9999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '7 Hari Terakhir',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.onSurfaceVariant,
+                    PopupMenuButton<String>(
+                      initialValue: _selectedFilter,
+                      onSelected: (String newValue) {
+                        setState(() {
+                          _selectedFilter = newValue;
+                        });
+                        _loadData();
+                      },
+                      itemBuilder: (BuildContext context) {
+                        return _filterOptions.map((String choice) {
+                          return PopupMenuItem<String>(
+                            value: choice,
+                            child: Text(choice),
+                          );
+                        }).toList();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(9999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _selectedFilter,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.expand_more, size: 16, color: AppTheme.onSurfaceVariant),
-                        ],
+                            const SizedBox(width: 4),
+                            Icon(Icons.expand_more, size: 16, color: AppTheme.onSurfaceVariant),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -138,7 +188,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 subtitle: 'Total Item',
                 value: '$_totalSold',
                 suffix: 'pcs',
-                colors: [const Color(0xFF8D6E63), const Color(0xFF5D4037)],
+                colors: [const Color(0xFFD6BEA8), const Color(0xFFC4A88E)],
                 icon: Icons.shopping_bag_outlined,
               ),
             ),
@@ -149,7 +199,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 title: 'PEMASUKAN',
                 subtitle: 'Total IDR',
                 value: _formatCurrency(_totalIncome),
-                colors: [AppTheme.tertiary, const Color(0xFF004D40)],
+                colors: [const Color(0xFFEAC295), const Color(0xFFDEB079)],
                 icon: Icons.account_balance_wallet_outlined,
               ),
             ),
@@ -164,7 +214,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 title: 'PENGELUARAN',
                 subtitle: 'Total IDR',
                 value: _formatCurrency(_totalExpense),
-                colors: [AppTheme.error, const Color(0xFFB71C1C)],
+                colors: [const Color(0xFFCF9A69), const Color(0xFFC08552)],
                 icon: Icons.money_off_csred_outlined,
               ),
             ),
@@ -175,9 +225,8 @@ class _DashboardPageState extends State<DashboardPage> {
                 title: 'LABA BERSIH',
                 subtitle: 'Profit IDR',
                 value: _formatCurrency(_profit),
-                colors: [AppTheme.primary, AppTheme.primaryContainer],
+                colors: [const Color(0xFF967054), const Color(0xFF7A563F)],
                 icon: Icons.stars,
-                badgeText: 'Target Tercapai',
               ),
             ),
           ],
@@ -197,7 +246,6 @@ class _DashboardPageState extends State<DashboardPage> {
   }) {
     return Container(
       height: 140,
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -213,68 +261,81 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Stack(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.8),
-                  letterSpacing: 2,
-                ),
-              ),
-              Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.8)),
-            ],
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(
+              Icons.cookie,
+              size: 110,
+              color: Colors.white.withValues(alpha: 0.15),
+            ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.6),
-                ),
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Expanded(
-                    child: Text(
-                      value,
-                      style: const TextStyle(
-                        fontFamily: 'Plus Jakarta Sans',
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (suffix != null) ...[
-                    const SizedBox(width: 4),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     Text(
-                      suffix,
+                      title,
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
                         color: Colors.white.withValues(alpha: 0.8),
+                        letterSpacing: 2,
                       ),
+                    ),
+                    Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.8)),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            value,
+                            style: const TextStyle(
+                              fontFamily: 'Plus Jakarta Sans',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (suffix != null) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            suffix,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
-                ],
-              ),
-            ],
-          ),
+                ),
           if (badgeText != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -302,14 +363,37 @@ class _DashboardPageState extends State<DashboardPage> {
             const SizedBox(height: 18), // Spacer to balance height
         ],
       ),
-    );
+    ),
+  ],
+),
+);
+}
+
+  List<FlSpot> _getSpots(List<double> data) {
+    return List.generate(data.length, (index) => FlSpot(index.toDouble(), data[index] / 1000000));
   }
 
   Widget _buildTrenKeuangan() {
+    double maxVal = 0;
+    for (var v in _incomeSpots) {
+      if (v > maxVal) maxVal = v;
+    }
+    for (var v in _expenseSpots) {
+      if (v > maxVal) maxVal = v;
+    }
+    
+    double maxYChart = maxVal / 1000000;
+    if (maxYChart < 1) maxYChart = 1;
+    
+    double interval = (maxYChart / 4).ceilToDouble();
+    if (interval < 1) interval = 1;
+
+    double calculatedMaxY = (maxYChart / interval).ceil() * interval;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest, // Better contrast
+        color: AppTheme.surfaceContainerLowest, 
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: AppTheme.outlineVariant.withValues(alpha: 0.2),
@@ -344,10 +428,29 @@ class _DashboardPageState extends State<DashboardPage> {
             height: 220,
             child: LineChart(
               LineChartData(
+                maxY: calculatedMaxY > 0 ? calculatedMaxY : 1,
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (touchedSpot) => AppTheme.surfaceContainerHighest,
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final value = spot.y * 1000000;
+                        return LineTooltipItem(
+                          _formatCurrency(value.toInt()),
+                          TextStyle(
+                            color: spot.bar.color ?? AppTheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
-                  horizontalInterval: 2,
+                  horizontalInterval: interval,
                   getDrawingHorizontalLine: (value) {
                     return FlLine(
                       color: AppTheme.outlineVariant.withValues(alpha: 0.2),
@@ -383,12 +486,11 @@ class _DashboardPageState extends State<DashboardPage> {
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
-                        const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-                        if (value.toInt() >= 0 && value.toInt() < days.length) {
+                        if (value.toInt() >= 0 && value.toInt() < _chartLabels.length) {
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: Text(
-                              days[value.toInt()],
+                              _chartLabels[value.toInt()],
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
@@ -407,15 +509,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 lineBarsData: [
                   // Masuk (Pemasukan)
                   LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 2),
-                      FlSpot(1, 4),
-                      FlSpot(2, 3.5),
-                      FlSpot(3, 5),
-                      FlSpot(4, 6),
-                      FlSpot(5, 7),
-                      FlSpot(6, 10), // E.g., 10 million on Sunday (Dummy data)
-                    ],
+                    spots: _getSpots(_incomeSpots),
                     isCurved: true,
                     color: AppTheme.tertiary,
                     barWidth: 3,
@@ -435,15 +529,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                   // Keluar (Pengeluaran)
                   LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 1),
-                      FlSpot(1, 2.5),
-                      FlSpot(2, 1.5),
-                      FlSpot(3, 2),
-                      FlSpot(4, 3),
-                      FlSpot(5, 2.8),
-                      FlSpot(6, 3.5),
-                    ],
+                    spots: _getSpots(_expenseSpots),
                     isCurved: true,
                     color: AppTheme.error,
                     barWidth: 3,
@@ -463,7 +549,6 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ],
                 minY: 0,
-                maxY: 12,
               ),
             ),
           ),

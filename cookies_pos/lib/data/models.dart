@@ -4,6 +4,7 @@ class Product {
   final int price;
   final int stock;
   final bool isFavorite;
+  final String? imagePath;
 
   Product({
     this.id,
@@ -11,6 +12,7 @@ class Product {
     required this.price,
     required this.stock,
     this.isFavorite = false,
+    this.imagePath,
   });
 
   Map<String, dynamic> toMap() {
@@ -20,6 +22,7 @@ class Product {
       'price': price,
       'stock': stock,
       'isFavorite': isFavorite ? 1 : 0,
+      'imagePath': imagePath,
     };
   }
 
@@ -30,6 +33,7 @@ class Product {
       price: map['price'] as int,
       stock: map['stock'] as int,
       isFavorite: (map['isFavorite'] as int) == 1,
+      imagePath: map['imagePath'] as String?,
     );
   }
 
@@ -39,6 +43,7 @@ class Product {
     int? price,
     int? stock,
     bool? isFavorite,
+    String? imagePath,
   }) {
     return Product(
       id: id ?? this.id,
@@ -46,6 +51,7 @@ class Product {
       price: price ?? this.price,
       stock: stock ?? this.stock,
       isFavorite: isFavorite ?? this.isFavorite,
+      imagePath: imagePath ?? this.imagePath,
     );
   }
 }

@@ -1,9 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_top_bar.dart';
 import '../data/database_helper.dart';
 import '../data/models.dart';
+import '../utils/global_sync.dart';
 
 class KatalogPage extends StatefulWidget {
   const KatalogPage({super.key});
@@ -12,25 +16,34 @@ class KatalogPage extends StatefulWidget {
   State<KatalogPage> createState() => _KatalogPageState();
 }
 
-class _KatalogPageState extends State<KatalogPage> {
+class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   List<Product> _products = [];
   bool _isLoading = true;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _stockController = TextEditingController();
+  
+  final ScrollController _scrollController = ScrollController();
+  
+  String? _selectedImagePath;
 
   @override
   void initState() {
     super.initState();
     _loadProducts();
+    GlobalSync.instance.addListener(_loadProducts);
   }
 
   @override
   void dispose() {
+    GlobalSync.instance.removeListener(_loadProducts);
     _nameController.dispose();
     _priceController.dispose();
     _stockController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -45,6 +58,39 @@ class _KatalogPageState extends State<KatalogPage> {
 
   String _formatCurrency(int amount) {
     return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(amount);
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      if (!mounted) return;
+      
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: pickedFile.path,
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Potong ke 1:1',
+            toolbarColor: AppTheme.primary,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true,
+          ),
+          IOSUiSettings(
+            title: 'Potong ke 1:1',
+            aspectRatioLockEnabled: true,
+            resetAspectRatioEnabled: false,
+          ),
+        ],
+      );
+
+      if (croppedFile != null && mounted) {
+        setState(() {
+          _selectedImagePath = croppedFile.path;
+        });
+      }
+    }
   }
 
   Future<void> _addProduct() async {
@@ -66,6 +112,7 @@ class _KatalogPageState extends State<KatalogPage> {
       name: name,
       price: price,
       stock: stock,
+      imagePath: _selectedImagePath,
     );
 
     await DatabaseHelper().insertProduct(newProduct);
@@ -75,6 +122,9 @@ class _KatalogPageState extends State<KatalogPage> {
     _nameController.clear();
     _priceController.clear();
     _stockController.clear();
+    setState(() {
+      _selectedImagePath = null;
+    });
     
     // Hide keyboard
     FocusScope.of(context).unfocus();
@@ -131,6 +181,7 @@ class _KatalogPageState extends State<KatalogPage> {
     
     if (updated == true && mounted) {
       _loadProducts();
+      GlobalSync.instance.notify();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Stok berhasil diperbarui!'), backgroundColor: Colors.green),
       );
@@ -164,6 +215,7 @@ class _KatalogPageState extends State<KatalogPage> {
       await DatabaseHelper().deleteProduct(product.id!);
       if (!mounted) return;
       _loadProducts();
+      GlobalSync.instance.notify();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Produk dihapus')),
       );
@@ -172,7 +224,9 @@ class _KatalogPageState extends State<KatalogPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return SingleChildScrollView(
+      controller: _scrollController,
       padding: const EdgeInsets.only(bottom: 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,7 +348,11 @@ class _KatalogPageState extends State<KatalogPage> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(9999),
                     onTap: () {
-                      // Scroll to form (Optional: Needs ScrollController to be perfect)
+                      _scrollController.animateTo(
+                        _scrollController.position.maxScrollExtent + 200,
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeOut,
+                      );
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -420,16 +478,23 @@ class _KatalogPageState extends State<KatalogPage> {
                   topLeft: Radius.circular(16),
                   bottomLeft: Radius.circular(16),
                 ),
+                image: product.imagePath != null && product.imagePath!.isNotEmpty
+                    ? DecorationImage(
+                        image: FileImage(File(product.imagePath!)),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
               ),
               child: Stack(
                 children: [
-                  Center(
-                    child: Icon(
-                      Icons.cookie,
-                      size: 40,
-                      color: AppTheme.onSurfaceVariant.withValues(alpha: 0.2),
+                  if (product.imagePath == null || product.imagePath!.isEmpty)
+                    Center(
+                      child: Icon(
+                        Icons.cookie,
+                        size: 40,
+                        color: AppTheme.onSurfaceVariant.withValues(alpha: 0.2),
+                      ),
                     ),
-                  ),
                   if (isHabis)
                     Positioned.fill(
                       child: Container(
@@ -497,28 +562,24 @@ class _KatalogPageState extends State<KatalogPage> {
                                   ),
                                   const SizedBox(width: 8),
                                   // Tambah Stok Button
-                                  GestureDetector(
-                                    onTap: () => _tambahStok(product),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.tertiary.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(4),
+                                  ElevatedButton.icon(
+                                    onPressed: () => _tambahStok(product),
+                                    icon: const Icon(Icons.add_circle, size: 18),
+                                    label: const Text(
+                                      'Stok',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.add, size: 12, color: AppTheme.tertiary),
-                                          const SizedBox(width: 2),
-                                          Text(
-                                            'Stok',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: AppTheme.tertiary,
-                                            ),
-                                          ),
-                                        ],
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.tertiary.withValues(alpha: 0.1),
+                                      foregroundColor: AppTheme.tertiary,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      minimumSize: const Size(0, 36),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
                                     ),
                                   ),
@@ -578,14 +639,20 @@ class _KatalogPageState extends State<KatalogPage> {
             children: [
               const Divider(color: AppTheme.outlineVariant, thickness: 0.5),
               const SizedBox(height: 24),
-              Text(
-                'Detail Produk Baru',
-                style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                  color: AppTheme.onSurface,
-                ),
+              Row(
+                children: [
+                  Icon(Icons.add_circle, color: AppTheme.primary, size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Detail Produk Baru',
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
+                      color: AppTheme.onSurface,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -722,39 +789,62 @@ class _KatalogPageState extends State<KatalogPage> {
               ),
               const SizedBox(height: 20),
 
-              // Foto Produk (Placeholder)
+              // Foto Produk
               _fieldLabel('FOTO PRODUK'),
               const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                height: 140,
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppTheme.outlineVariant.withValues(alpha: 0.5),
-                    width: 2,
-                    strokeAlign: BorderSide.strokeAlignInside,
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.outlineVariant.withValues(alpha: 0.5),
+                      width: 2,
+                      strokeAlign: BorderSide.strokeAlignInside,
+                    ),
+                    image: _selectedImagePath != null
+                        ? DecorationImage(
+                            image: FileImage(File(_selectedImagePath!)),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
                   ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.cloud_upload_outlined,
-                      size: 32,
-                      color: AppTheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Klik untuk unggah foto (Maks. 5MB)',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                  child: _selectedImagePath == null
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.cloud_upload_outlined,
+                              size: 32,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Klik untuk unggah foto (Maks. 5MB)',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Align(
+                          alignment: Alignment.topRight,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: CircleAvatar(
+                              backgroundColor: Colors.black54,
+                              child: IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.white, size: 18),
+                                onPressed: _pickImage,
+                              ),
+                            ),
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(height: 24),

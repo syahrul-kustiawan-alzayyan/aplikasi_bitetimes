@@ -4,6 +4,8 @@ import '../theme/app_theme.dart';
 import '../widgets/app_top_bar.dart';
 import '../data/database_helper.dart';
 import '../data/models.dart';
+import '../utils/global_sync.dart';
+import 'riwayat_page.dart';
 
 class PengeluaranPage extends StatefulWidget {
   const PengeluaranPage({super.key});
@@ -12,9 +14,14 @@ class PengeluaranPage extends StatefulWidget {
   State<PengeluaranPage> createState() => _PengeluaranPageState();
 }
 
-class _PengeluaranPageState extends State<PengeluaranPage> {
+class _PengeluaranPageState extends State<PengeluaranPage> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  DateTime _selectedDate = DateTime.now();
+  String _selectedCategory = 'Lainnya';
+  final List<String> _expenseCategories = ['Bahan Baku', 'Gaji Kasir', 'Operasional', 'Listrik', 'Lainnya'];
 
   List<Expense> _expenses = [];
   int _totalExpenseThisMonth = 0;
@@ -24,10 +31,12 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
   void initState() {
     super.initState();
     _loadData();
+    GlobalSync.instance.addListener(_loadData);
   }
 
   @override
   void dispose() {
+    GlobalSync.instance.removeListener(_loadData);
     _amountController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -39,12 +48,8 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
     final expenses = await DatabaseHelper().getExpenses();
     
     int total = 0;
-    final now = DateTime.now();
     for (var exp in expenses) {
-      final date = DateTime.parse(exp.date);
-      if (date.year == now.year && date.month == now.month) {
-        total += exp.amount;
-      }
+      total += exp.amount;
     }
 
     setState(() {
@@ -52,6 +57,32 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
       _totalExpenseThisMonth = total;
       _isLoading = false;
     });
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primary,
+              onPrimary: Colors.white,
+              onSurface: AppTheme.onSurface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
   }
 
   String _formatCurrency(int amount) {
@@ -77,12 +108,13 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
 
     final expense = Expense(
       amount: amount,
-      date: DateTime.now().toIso8601String(),
-      category: 'Lainnya',
+      date: _selectedDate.toIso8601String(),
+      category: _selectedCategory,
       description: notes.isEmpty ? 'Pengeluaran Manual' : notes,
     );
 
     await DatabaseHelper().insertExpense(expense);
+    GlobalSync.instance.notify();
 
     if (!mounted) return;
 
@@ -99,6 +131,7 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 100),
       child: Column(
@@ -130,101 +163,45 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
   }
 
   Widget _buildKpiCard() {
-    // Dummy limit for UI
-    const int limit = 5000000;
-    final double progress = (_totalExpenseThisMonth / limit).clamp(0.0, 1.0);
-
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.15)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF564338).withValues(alpha: 0.04),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'TOTAL PENGELUARAN',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.onSurfaceVariant,
+            letterSpacing: 1.5,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Total Pengeluaran Bulan Ini',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 4),
-          RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: 'Rp ',
-                  style: TextStyle(
-                    fontFamily: 'Plus Jakarta Sans',
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primary,
-                  ),
-                ),
-                TextSpan(
-                  text: NumberFormat('#,###', 'id_ID').format(_totalExpenseThisMonth),
-                  style: TextStyle(
-                    fontFamily: 'Plus Jakarta Sans',
-                    fontSize: 36,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.onSurface,
-                    letterSpacing: -1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Progress bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(9999),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: AppTheme.errorContainer.withValues(alpha: 0.3),
-              valueColor: const AlwaysStoppedAnimation(AppTheme.error),
-              minHeight: 8,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ),
+        const SizedBox(height: 4),
+        RichText(
+          text: TextSpan(
             children: [
-              Row(
-                children: [
-                  Icon(progress > 0.8 ? Icons.warning : Icons.trending_up, size: 14, color: AppTheme.error),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${(progress * 100).toInt()}% dari limit bulanan',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.error,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                'Limit: Rp ${_formatCurrency(limit).replaceAll("Rp ", "")}',
+              TextSpan(
+                text: 'Rp ',
                 style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.onSurfaceVariant,
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.error,
+                ),
+              ),
+              TextSpan(
+                text: NumberFormat('#,###', 'id_ID').format(_totalExpenseThisMonth),
+                style: TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontSize: 40,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.onSurface,
+                  letterSpacing: -1,
                 ),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -232,55 +209,77 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              children: [
+                Icon(Icons.add_circle, color: AppTheme.primary, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'Tambah Pengeluaran Baru',
+                  style: TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                    color: AppTheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
             Text(
-              'Tambah Pengeluaran Baru',
+              'Catat pengeluaran operasional atau belanja bahan.',
               style: TextStyle(
-                fontFamily: 'Plus Jakarta Sans',
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-                color: AppTheme.onSurface,
+                fontSize: 12,
+                color: AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
               ),
             ),
-            Icon(Icons.add_circle, color: AppTheme.primary),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Tanggal
-              _fieldLabel('TANGGAL (OTOMATIS)'),
+              _fieldLabel('TANGGAL'),
               const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceContainerHighest,
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _selectDate(context),
                   borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      DateFormat('MM/dd/yyyy').format(DateTime.now()),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.onSurface,
-                      ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
                     ),
-                    const Spacer(),
-                    Icon(Icons.calendar_today, size: 16, color: AppTheme.onSurfaceVariant),
-                  ],
+                    child: Row(
+                      children: [
+                        Text(
+                          DateFormat('dd/MM/yyyy').format(_selectedDate),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.onSurface,
+                          ),
+                        ),
+                        const Spacer(),
+                        Icon(Icons.calendar_today, size: 16, color: AppTheme.onSurfaceVariant),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // Nominal
               _fieldLabel('NOMINAL RP'),
@@ -310,29 +309,41 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
               // Kategori
               _fieldLabel('KATEGORI'),
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
                 ),
-                child: Row(
-                  children: [
-                    Text(
-                      'Lainnya',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.onSurface,
-                      ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedCategory,
+                    isExpanded: true,
+                    icon: Icon(Icons.expand_more, size: 20, color: AppTheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.onSurface,
                     ),
-                    const Spacer(),
-                    Icon(Icons.expand_more, size: 20, color: AppTheme.onSurfaceVariant),
-                  ],
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _selectedCategory = newValue;
+                        });
+                      }
+                    },
+                    items: _expenseCategories.map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -350,11 +361,17 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                 child: TextField(
                   controller: _notesController,
                   maxLines: null,
+                  style: TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontSize: 14,
+                    color: AppTheme.onSurface,
+                  ),
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: 'Contoh: Belanja bahan pack...',
                     hintStyle: TextStyle(
-                      color: AppTheme.outlineVariant,
+                      fontFamily: 'Plus Jakarta Sans',
+                      color: AppTheme.onSurfaceVariant.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
@@ -413,10 +430,10 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
           color: AppTheme.onSurfaceVariant,
-          letterSpacing: 1,
+          letterSpacing: 1.5,
         ),
       ),
     );
@@ -471,6 +488,30 @@ class _PengeluaranPageState extends State<PengeluaranPage> {
                 amount: exp.amount,
               );
             },
+          ),
+        const SizedBox(height: 16),
+        if (_expenses.isNotEmpty)
+          Center(
+            child: TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RiwayatPage(
+                      title: 'Semua Pengeluaran',
+                      isIncome: false,
+                    ),
+                  ),
+                );
+              },
+              child: Text(
+                'Lihat Semua Riwayat',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.error,
+                ),
+              ),
+            ),
           ),
       ],
     );

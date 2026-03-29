@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'models.dart';
+import 'package:intl/intl.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -17,13 +18,20 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'bitetimes.db');
+    final path = join(dbPath, 'bitetimes_clean.db');
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE products ADD COLUMN imagePath TEXT');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -33,7 +41,8 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         price INTEGER NOT NULL,
         stock INTEGER NOT NULL DEFAULT 0,
-        isFavorite INTEGER NOT NULL DEFAULT 0
+        isFavorite INTEGER NOT NULL DEFAULT 0,
+        imagePath TEXT
       )
     ''');
 
@@ -78,62 +87,6 @@ class DatabaseHelper {
         date TEXT NOT NULL
       )
     ''');
-
-    // Seed dummy data
-    await _seedDummyData(db);
-  }
-
-  Future<void> _seedDummyData(Database db) async {
-    // Products
-    final products = [
-      {'name': 'Choco Chip Classic', 'price': 15000, 'stock': 45, 'isFavorite': 0},
-      {'name': 'Velvet Dream', 'price': 18000, 'stock': 32, 'isFavorite': 1},
-      {'name': 'Matcha Zen', 'price': 20000, 'stock': 28, 'isFavorite': 0},
-      {'name': 'Macadamia White', 'price': 22000, 'stock': 15, 'isFavorite': 0},
-      {'name': 'Dark Sea Salt', 'price': 17000, 'stock': 0, 'isFavorite': 0},
-      {'name': 'Oatmeal Raisin', 'price': 15000, 'stock': 50, 'isFavorite': 0},
-    ];
-
-    for (final p in products) {
-      await db.insert('products', p);
-    }
-
-    // Sales (sample)
-    await db.insert('sales', {
-      'totalAmount': 48000,
-      'paymentMethod': 'Cash',
-      'createdAt': '2023-10-27 14:30:00',
-    });
-    await db.insert('sale_items', {
-      'saleId': 1, 'productId': 1, 'productName': 'Choco Chip Classic',
-      'price': 15000, 'quantity': 2,
-    });
-    await db.insert('sale_items', {
-      'saleId': 1, 'productId': 2, 'productName': 'Velvet Dream',
-      'price': 18000, 'quantity': 1,
-    });
-
-    // Incomes
-    final incomes = [
-      {'amount': 450000, 'source': 'Penjualan POS', 'description': 'Penjualan harian otomatis dari POS', 'date': '2023-10-27 14:30:00'},
-      {'amount': 10000000, 'source': 'Modal Awal', 'description': 'Setoran modal usaha awal bulan', 'date': '2023-10-12 08:00:00'},
-      {'amount': 2500000, 'source': 'Pembayaran Piutang', 'description': 'Pelunasan piutang Pak Budi', 'date': '2023-10-10 11:15:00'},
-    ];
-
-    for (final i in incomes) {
-      await db.insert('incomes', i);
-    }
-
-    // Expenses
-    final expenses = [
-      {'amount': 450000, 'category': 'Bahan Baku', 'description': 'Belanja Mentega A2 5kg', 'date': '2023-10-27 09:00:00'},
-      {'amount': 120000, 'category': 'Packaging', 'description': 'Box Cookie Premium 100pcs', 'date': '2023-10-26 10:00:00'},
-      {'amount': 850000, 'category': 'Operasional', 'description': 'Listrik Toko Oktober', 'date': '2023-10-25 08:00:00'},
-    ];
-
-    for (final e in expenses) {
-      await db.insert('expenses', e);
-    }
   }
 
   // ── Products ──────────────────────────────────────────────────────────
@@ -251,10 +204,38 @@ class DatabaseHelper {
 
   // ── Dashboard Aggregates ──────────────────────────────────────────────
 
-  Future<Map<String, int>> getDashboardStats() async {
-    final totalSold = await getTotalSalesCount();
-    final totalIncome = await getTotalIncome();
-    final totalExpense = await getTotalExpense();
+  Future<Map<String, int>> getDashboardStats({DateTime? startDate}) async {
+    final startStr = startDate?.toIso8601String() ?? '';
+    
+    final db = await database;
+    
+    // Total Sales Count
+    var saleItemsResult = await db.rawQuery(
+      startDate == null 
+        ? 'SELECT COALESCE(SUM(quantity), 0) as total FROM sale_items'
+        : 'SELECT COALESCE(SUM(si.quantity), 0) as total FROM sale_items si JOIN sales s ON si.saleId = s.id WHERE s.createdAt >= ?',
+      startDate == null ? [] : [startStr]
+    );
+    final totalSold = (saleItemsResult.first['total'] as int?) ?? 0;
+
+    // Total Income
+    var incomeResult = await db.rawQuery(
+      startDate == null
+        ? 'SELECT COALESCE(SUM(amount), 0) as total FROM incomes'
+        : 'SELECT COALESCE(SUM(amount), 0) as total FROM incomes WHERE date >= ?',
+      startDate == null ? [] : [startStr]
+    );
+    final totalIncome = (incomeResult.first['total'] as int?) ?? 0;
+
+    // Total Expense
+    var expenseResult = await db.rawQuery(
+      startDate == null
+        ? 'SELECT COALESCE(SUM(amount), 0) as total FROM expenses'
+        : 'SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE date >= ?',
+      startDate == null ? [] : [startStr]
+    );
+    final totalExpense = (expenseResult.first['total'] as int?) ?? 0;
+
     final profit = totalIncome - totalExpense;
 
     return {
@@ -265,15 +246,82 @@ class DatabaseHelper {
     };
   }
 
-  Future<Map<String, int>> getVariantSales() async {
+  Future<Map<String, dynamic>> getDynamicChartData({DateTime? startDate}) async {
+    final startStr = startDate?.toIso8601String() ?? '';
     final db = await database;
-    final result = await db.rawQuery('''
+
+    final incomes = await db.query(
+      'incomes',
+      where: startDate == null ? null : 'date >= ?',
+      whereArgs: startDate == null ? [] : [startStr],
+    );
+
+    final expenses = await db.query(
+      'expenses',
+      where: startDate == null ? null : 'date >= ?',
+      whereArgs: startDate == null ? [] : [startStr],
+    );
+
+    Map<String, double> incomeMap = {};
+    Map<String, double> expenseMap = {};
+    Set<String> uniqueDates = {};
+
+    for (var m in incomes) {
+      final dateStr = (m['date'] as String).substring(0, 10);
+      uniqueDates.add(dateStr);
+      incomeMap[dateStr] = (incomeMap[dateStr] ?? 0) + (m['amount'] as int).toDouble();
+    }
+
+    for (var m in expenses) {
+      final dateStr = (m['date'] as String).substring(0, 10);
+      uniqueDates.add(dateStr);
+      expenseMap[dateStr] = (expenseMap[dateStr] ?? 0) + (m['amount'] as int).toDouble();
+    }
+
+    final sortedDates = uniqueDates.toList()..sort();
+
+    List<double> incomeSpots = [];
+    List<double> expenseSpots = [];
+    List<String> labels = [];
+
+    for (var date in sortedDates) {
+      final parsedDate = DateTime.parse(date);
+      labels.add(DateFormat('dd/MM').format(parsedDate));
+      incomeSpots.add(incomeMap[date] ?? 0.0);
+      expenseSpots.add(expenseMap[date] ?? 0.0);
+    }
+
+    return {
+      'income': incomeSpots,
+      'expense': expenseSpots,
+      'labels': labels,
+    };
+  }
+
+  Future<Map<String, int>> getVariantSales({DateTime? startDate}) async {
+    final startStr = startDate?.toIso8601String() ?? '';
+    final db = await database;
+    
+    final result = await db.rawQuery(
+      startDate == null 
+      ? '''
       SELECT productName, COALESCE(SUM(quantity), 0) as totalQty
       FROM sale_items
       GROUP BY productName
       ORDER BY totalQty DESC
       LIMIT 5
-    ''');
+      '''
+      : '''
+      SELECT si.productName, COALESCE(SUM(si.quantity), 0) as totalQty
+      FROM sale_items si
+      JOIN sales s ON si.saleId = s.id
+      WHERE s.createdAt >= ?
+      GROUP si.productName
+      ORDER BY totalQty DESC
+      LIMIT 5
+      ''',
+      startDate == null ? [] : [startStr]
+    );
 
     final map = <String, int>{};
     for (final row in result) {

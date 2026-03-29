@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_top_bar.dart';
 import '../data/database_helper.dart';
 import '../data/models.dart';
+import '../utils/global_sync.dart';
 
 class KasirPage extends StatefulWidget {
   const KasirPage({super.key});
@@ -12,7 +14,9 @@ class KasirPage extends StatefulWidget {
   State<KasirPage> createState() => _KasirPageState();
 }
 
-class _KasirPageState extends State<KasirPage> {
+class _KasirPageState extends State<KasirPage> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   List<Product> _products = [];
   bool _isLoading = true;
 
@@ -23,6 +27,13 @@ class _KasirPageState extends State<KasirPage> {
   void initState() {
     super.initState();
     _loadProducts();
+    GlobalSync.instance.addListener(_loadProducts);
+  }
+
+  @override
+  void dispose() {
+    GlobalSync.instance.removeListener(_loadProducts);
+    super.dispose();
   }
 
   Future<void> _loadProducts() async {
@@ -193,8 +204,12 @@ class _KasirPageState extends State<KasirPage> {
 
     // Create sale items
     final saleItems = <SaleItem>[];
+    final List<String> itemDescriptions = [];
+
     _cart.forEach((productId, qty) {
       final product = _products.firstWhere((p) => p.id == productId);
+      itemDescriptions.add('${qty}x ${product.name}');
+      
       saleItems.add(SaleItem(
         saleId: 0, // Assigned by db
         productId: productId,
@@ -207,11 +222,15 @@ class _KasirPageState extends State<KasirPage> {
     // Insert sale and items (this also decreases product stock in DB)
     await dbHelper.insertSale(sale, saleItems);
 
+    final String detailedDesc = itemDescriptions.isNotEmpty 
+        ? 'Penjualan: ${itemDescriptions.join(", ")}'
+        : 'Penjualan otomatis dari menu Kasir';
+
     // Auto record as Income
     await dbHelper.insertIncome(Income(
       amount: _subtotal,
       source: 'Penjualan POS',
-      description: 'Penjualan otomatis dari menu Kasir',
+      description: detailedDesc,
       date: DateTime.now().toIso8601String(),
     ));
 
@@ -221,6 +240,7 @@ class _KasirPageState extends State<KasirPage> {
     });
     
     await _loadProducts();
+    GlobalSync.instance.notify();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -234,6 +254,7 @@ class _KasirPageState extends State<KasirPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 100),
       child: Column(
@@ -280,7 +301,7 @@ class _KasirPageState extends State<KasirPage> {
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.72,
+                      childAspectRatio: 1.0,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                     ),
@@ -369,130 +390,101 @@ class _KasirPageState extends State<KasirPage> {
           : null,
       child: Opacity(
         opacity: available ? 1.0 : 0.5,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  Container(
+        child: Container(
+          decoration: BoxDecoration(
+             borderRadius: BorderRadius.circular(16),
+             color: AppTheme.surfaceContainerLow,
+          ),
+          child: Stack(
+            children: [
+              // 1. Image Background
+              Positioned.fill(
+                 child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: (product.imagePath != null && product.imagePath!.isNotEmpty)
+                       ? Image.file(File(product.imagePath!), fit: BoxFit.cover)
+                       : Icon(Icons.cookie_outlined, size: 48, color: AppTheme.onSurfaceVariant.withValues(alpha: 0.3)),
+                 ),
+              ),
+              // 2. Gradient Overlay for Text Readability
+              Positioned.fill(
+                 child: Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      color: AppTheme.surfaceContainerLow,
+                       borderRadius: BorderRadius.circular(16),
+                       gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                             Colors.transparent,
+                             Colors.black.withValues(alpha: 0.85),
+                          ],
+                       ),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: ColorFiltered(
-                        colorFilter: available
-                            ? const ColorFilter.mode(Colors.transparent, BlendMode.multiply)
-                            : const ColorFilter.matrix([
-                                0.2126, 0.7152, 0.0722, 0, 0,
-                                0.2126, 0.7152, 0.0722, 0, 0,
-                                0.2126, 0.7152, 0.0722, 0, 0,
-                                0, 0, 0, 1, 0,
-                              ]),
-                        child: Container(
-                          width: double.infinity,
-                          height: double.infinity,
-                          color: AppTheme.surfaceContainerHigh,
-                          child: Icon(
-                            Icons.cookie_outlined,
-                            size: 48,
-                            color: AppTheme.onSurfaceVariant.withValues(alpha: 0.3),
-                          ),
-                        ),
+                 ),
+              ),
+              // 3. Text & Details at bottom
+              Positioned(
+                 bottom: 12,
+                 left: 12,
+                 right: 12,
+                 child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                       Text(
+                          product.name,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.white),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                       ),
+                       const SizedBox(height: 2),
+                       Text(
+                          _formatCurrency(product.price),
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: Colors.amberAccent),
+                       ),
+                    ],
+                 ),
+              ),
+              // 4. Badges (Habis / InCart / Stock)
+              if (!available)
+                 Center(
+                    child: Container(
+                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                       decoration: BoxDecoration(color: AppTheme.error, borderRadius: BorderRadius.circular(9999)),
+                       child: const Text('Habis', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+                    ),
+                 ),
+              if (inCartQty > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$inCartQty',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
                       ),
                     ),
                   ),
-                  if (!available)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppTheme.error,
-                              borderRadius: BorderRadius.circular(9999),
-                            ),
-                            child: const Text(
-                              'Habis',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (product.isFavorite)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.tertiary,
-                          borderRadius: BorderRadius.circular(9999),
-                        ),
-                        child: const Text(
-                          'FAVORIT',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  // Show stock left
-                  Positioned(
-                    bottom: 8,
+                ),
+              if (available)
+                 Positioned(
+                    top: 8,
                     left: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Sisa ${product.stock - inCartQty}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                       decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(4)),
+                       child: Text('Sisa ${product.stock - inCartQty}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              product.name,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: AppTheme.onSurface,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              _formatCurrency(product.price),
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: available ? AppTheme.primary : AppTheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+                 ),
+            ],
+          ),
         ),
       ),
     );
