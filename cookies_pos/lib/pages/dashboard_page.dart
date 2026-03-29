@@ -140,6 +140,7 @@ class _DashboardPageState extends State<DashboardPage>
                         color: AppTheme.onSurface,
                       ),
                     ),
+                    // Filter Dropdown
                     PopupMenuButton<String>(
                       initialValue: _selectedFilter,
                       onSelected: (String newValue) {

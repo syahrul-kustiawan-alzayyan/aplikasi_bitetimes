@@ -53,12 +53,18 @@ class AppTopBar extends StatelessWidget {
           ),
           const Spacer(),
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {
+              // Navigate to cart/riwayat when clicked
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Fitur keranjang akan segera hadir'),
+                  backgroundColor: AppTheme.primary,
+                ),
+              );
+            },
+            icon: const Icon(Icons.shopping_cart_outlined),
             color: AppTheme.primary,
-            style: IconButton.styleFrom(
-              shape: const CircleBorder(),
-            ),
+            style: IconButton.styleFrom(shape: const CircleBorder()),
           ),
         ],
       ),

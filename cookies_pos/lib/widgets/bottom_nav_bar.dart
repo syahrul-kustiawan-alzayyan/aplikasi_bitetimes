@@ -13,11 +13,31 @@ class AppBottomNavBar extends StatelessWidget {
   });
 
   static const _items = [
-    _NavItem(icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, label: 'Dashboard'),
-    _NavItem(icon: Icons.point_of_sale_outlined, activeIcon: Icons.point_of_sale, label: 'Kasir'),
-    _NavItem(icon: Icons.payments_outlined, activeIcon: Icons.payments, label: 'Masuk'),
-    _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long, label: 'Keluar'),
-    _NavItem(icon: Icons.inventory_2_outlined, activeIcon: Icons.inventory_2, label: 'Katalog'),
+    _NavItem(
+      icon: Icons.dashboard_outlined,
+      activeIcon: Icons.dashboard,
+      label: 'Dashboard',
+    ),
+    _NavItem(
+      icon: Icons.point_of_sale_outlined,
+      activeIcon: Icons.point_of_sale,
+      label: 'Kasir',
+    ),
+    _NavItem(
+      icon: Icons.payments_outlined,
+      activeIcon: Icons.payments,
+      label: 'Masuk',
+    ),
+    _NavItem(
+      icon: Icons.receipt_long_outlined,
+      activeIcon: Icons.receipt_long,
+      label: 'Keluar',
+    ),
+    _NavItem(
+      icon: Icons.inventory_2_outlined,
+      activeIcon: Icons.inventory_2,
+      label: 'Katalog',
+    ),
   ];
 
   @override
@@ -25,23 +45,36 @@ class AppBottomNavBar extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(9999),
+        borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: AppTheme.surface.withValues(alpha: 0.65),
-              borderRadius: BorderRadius.circular(9999),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.surface.withValues(alpha: 0.85),
+                  AppTheme.surfaceContainer.withValues(alpha: 0.75),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2),
-                width: 1,
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF564338).withValues(alpha: 0.08),
-                  blurRadius: 40,
-                  offset: const Offset(0, 12),
+                  color: const Color(0xFF564338).withValues(alpha: 0.12),
+                  blurRadius: 32,
+                  offset: const Offset(0, 8),
+                  spreadRadius: -4,
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -51,51 +84,63 @@ class AppBottomNavBar extends StatelessWidget {
                 final item = _items[index];
                 final isActive = currentIndex == index;
 
-                if (isActive) {
-                  return GestureDetector(
-                    onTap: () => onTap(index),
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [AppTheme.primary, AppTheme.primaryContainer],
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primary.withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Icon(item.activeIcon, color: Colors.white, size: 24),
-                    ),
-                  );
-                }
-
                 return GestureDetector(
                   onTap: () => onTap(index),
-                  child: SizedBox(
-                    width: 56,
-                    child: Column(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: isActive
+                        ? BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                AppTheme.primary,
+                                AppTheme.primaryContainer,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primary.withValues(alpha: 0.35),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          )
+                        : null,
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(item.icon, color: AppTheme.onSurfaceVariant, size: 24),
-                        const SizedBox(height: 2),
-                        Text(
-                          item.label,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.onSurfaceVariant,
-                            letterSpacing: 0.3,
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            isActive ? item.activeIcon : item.icon,
+                            key: ValueKey(isActive),
+                            color: isActive
+                                ? Colors.white
+                                : AppTheme.onSurfaceVariant,
+                            size: 22,
                           ),
                         ),
+                        if (isActive) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            item.label,
+                            style: const TextStyle(
+                              fontFamily: 'Plus Jakarta Sans',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ] else
+                          SizedBox(width: 8, height: 22),
                       ],
                     ),
                   ),

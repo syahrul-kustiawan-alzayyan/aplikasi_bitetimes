@@ -173,8 +173,7 @@ class _PemasukanPageState extends State<PemasukanPage>
 
     if (!mounted) return;
 
-    _amountController.clear();
-    _notesController.clear();
+    _clearForm();
     FocusScope.of(context).unfocus();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -185,6 +184,120 @@ class _PemasukanPageState extends State<PemasukanPage>
     );
 
     _loadData();
+  }
+
+  void _clearForm() {
+    _amountController.clear();
+    _notesController.clear();
+    _selectedDate = DateTime.now();
+    _selectedSource = 'Lainnya';
+  }
+
+  Future<void> _editIncome(Income income) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => _EditIncomeDialog(income: income),
+    );
+
+    if (result != null) {
+      final updatedIncome = Income(
+        id: income.id,
+        amount: result['amount'] as int,
+        source: result['source'] as String,
+        description: result['description'] as String,
+        date: (result['date'] as DateTime).toIso8601String(),
+      );
+
+      await DatabaseHelper().updateIncome(updatedIncome);
+      GlobalSync.instance.notify();
+      _loadData();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pemasukan berhasil diperbarui'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteIncome(Income income) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppTheme.error, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              'Hapus Pemasukan?',
+              style: TextStyle(
+                fontFamily: 'Plus Jakarta Sans',
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: AppTheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus pemasukan ini?\n\n"${income.description}"\n\nNominal: ${_formatCurrency(income.amount)}',
+          style: TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Batal',
+              style: TextStyle(color: AppTheme.onSurfaceVariant),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.error,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => Navigator.pop(context, true),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Text(
+                    'Hapus',
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await DatabaseHelper().deleteIncome(income.id!);
+      GlobalSync.instance.notify();
+      _loadData();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pemasukan berhasil dihapus'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -642,7 +755,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: _saveIncome,
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.symmetric(vertical: 16),
                     child: Text(
                       'Simpan Pemasukan',
@@ -742,6 +855,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                       index]; // Reverse list to show newest first
               final isManual = inc.source != 'Penjualan POS';
               return _transactionItem(
+                income: inc,
                 icon: isManual ? Icons.handshake : Icons.point_of_sale,
                 iconBgColor:
                     (isManual
@@ -754,6 +868,8 @@ class _PemasukanPageState extends State<PemasukanPage>
                 date: _formatDate(inc.date),
                 amount: inc.amount,
                 tag: isManual ? 'MANUAL' : 'OTOMATIS',
+                onEdit: () => _editIncome(inc),
+                onDelete: () => _deleteIncome(inc),
               );
             },
           ),
@@ -787,6 +903,7 @@ class _PemasukanPageState extends State<PemasukanPage>
   }
 
   Widget _transactionItem({
+    required Income income,
     required IconData icon,
     required Color iconBgColor,
     required Color iconColor,
@@ -795,6 +912,8 @@ class _PemasukanPageState extends State<PemasukanPage>
     required String date,
     required int amount,
     required String tag,
+    VoidCallback? onEdit,
+    VoidCallback? onDelete,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -862,25 +981,498 @@ class _PemasukanPageState extends State<PemasukanPage>
                 ),
               ),
               const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(9999),
-                ),
-                child: Text(
-                  tag,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.onSurfaceVariant,
-                    letterSpacing: -0.5,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
+                    onTap: onEdit,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.edit,
+                        size: 14,
+                        color: AppTheme.primary,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: onDelete,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.delete,
+                        size: 14,
+                        color: AppTheme.error,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EditIncomeDialog extends StatefulWidget {
+  final Income income;
+
+  const _EditIncomeDialog({required this.income});
+
+  @override
+  State<_EditIncomeDialog> createState() => _EditIncomeDialogState();
+}
+
+class _EditIncomeDialogState extends State<_EditIncomeDialog> {
+  late TextEditingController _amountController;
+  late TextEditingController _notesController;
+  late DateTime _selectedDate;
+  late String _selectedSource;
+  final List<String> _incomeSources = [
+    'Penjualan POS',
+    'Modal',
+    'Sponsorship',
+    'Lainnya',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(
+      text: widget.income.amount.toString(),
+    );
+    _notesController = TextEditingController(text: widget.income.description);
+    _selectedDate = DateTime.parse(widget.income.date);
+    _selectedSource = widget.income.source;
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primary,
+              onPrimary: Colors.white,
+              onSurface: AppTheme.onSurface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  void _save() {
+    final amountStr = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final amount = int.tryParse(amountStr) ?? 0;
+
+    if (amount <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Nominal tidak valid')));
+      return;
+    }
+
+    Navigator.pop(context, {
+      'amount': amount,
+      'source': _selectedSource,
+      'description': _notesController.text.trim().isEmpty
+          ? 'Pemasukan Manual'
+          : _notesController.text.trim(),
+      'date': _selectedDate,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      contentPadding: EdgeInsets.zero,
+      content: Container(
+        width: double.maxFinite,
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryContainer.withValues(alpha: 0.2),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.edit,
+                        color: AppTheme.primary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Edit Pemasukan',
+                            style: TextStyle(
+                              fontFamily: 'Plus Jakarta Sans',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              color: AppTheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            'Ubah data pemasukan',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      color: AppTheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Form
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Nominal
+                    _fieldLabel('NOMINAL (RP)'),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Rp',
+                            style: TextStyle(
+                              fontFamily: 'Plus Jakarta Sans',
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: _amountController,
+                              keyboardType: TextInputType.number,
+                              style: TextStyle(
+                                fontFamily: 'Plus Jakarta Sans',
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.onSurface,
+                              ),
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                hintText: '0',
+                                hintStyle: TextStyle(
+                                  color: AppTheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Tanggal & Sumber
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _fieldLabel('TANGGAL'),
+                              const SizedBox(height: 8),
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => _selectDate(context),
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.surfaceContainerHighest,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          DateFormat(
+                                            'dd/MM/yyyy',
+                                          ).format(_selectedDate),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.onSurface,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Icon(
+                                          Icons.calendar_today,
+                                          size: 16,
+                                          color: AppTheme.onSurfaceVariant,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _fieldLabel('SUMBER'),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: _selectedSource,
+                                    isExpanded: true,
+                                    icon: Icon(
+                                      Icons.expand_more,
+                                      size: 20,
+                                      color: AppTheme.onSurfaceVariant,
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.onSurface,
+                                    ),
+                                    onChanged: (String? newValue) {
+                                      if (newValue != null) {
+                                        setState(() {
+                                          _selectedSource = newValue;
+                                        });
+                                      }
+                                    },
+                                    items: _incomeSources
+                                        .map<DropdownMenuItem<String>>((
+                                          String value,
+                                        ) {
+                                          return DropdownMenuItem<String>(
+                                            value: value,
+                                            child: Text(value),
+                                          );
+                                        })
+                                        .toList(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Keterangan
+                    _fieldLabel('KETERANGAN'),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: TextField(
+                        controller: _notesController,
+                        maxLines: null,
+                        style: TextStyle(
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontSize: 14,
+                          color: AppTheme.onSurface,
+                        ),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          hintText: 'Tulis keterangan di sini...',
+                          hintStyle: TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            color: AppTheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Action Buttons
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.onSurfaceVariant,
+                          side: BorderSide(color: AppTheme.outlineVariant),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          'Batal',
+                          style: TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppTheme.primary,
+                              AppTheme.primaryContainer,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primary.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: _save,
+                            child: const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 14),
+                                child: Text(
+                                  'Simpan Perubahan',
+                                  style: TextStyle(
+                                    fontFamily: 'Plus Jakarta Sans',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fieldLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.onSurfaceVariant,
+          letterSpacing: 1.5,
+        ),
       ),
     );
   }

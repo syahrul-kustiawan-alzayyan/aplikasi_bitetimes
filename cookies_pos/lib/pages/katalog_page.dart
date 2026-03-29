@@ -16,7 +16,8 @@ class KatalogPage extends StatefulWidget {
   State<KatalogPage> createState() => _KatalogPageState();
 }
 
-class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClientMixin {
+class _KatalogPageState extends State<KatalogPage>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
   List<Product> _products = [];
@@ -25,9 +26,9 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _stockController = TextEditingController();
-  
+
   final ScrollController _scrollController = ScrollController();
-  
+
   String? _selectedImagePath;
 
   @override
@@ -57,7 +58,11 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
   }
 
   String _formatCurrency(int amount) {
-    return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(amount);
+    return NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    ).format(amount);
   }
 
   Future<void> _pickImage() async {
@@ -65,29 +70,40 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       if (!mounted) return;
-      
-      final croppedFile = await ImageCropper().cropImage(
-        sourcePath: pickedFile.path,
-        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-        uiSettings: [
-          AndroidUiSettings(
-            toolbarTitle: 'Potong ke 1:1',
-            toolbarColor: AppTheme.primary,
-            toolbarWidgetColor: Colors.white,
-            initAspectRatio: CropAspectRatioPreset.square,
-            lockAspectRatio: true,
-          ),
-          IOSUiSettings(
-            title: 'Potong ke 1:1',
-            aspectRatioLockEnabled: true,
-            resetAspectRatioEnabled: false,
-          ),
-        ],
-      );
 
-      if (croppedFile != null && mounted) {
+      // Check if platform supports image cropping (Android/iOS only)
+      final isMobile = Platform.isAndroid || Platform.isIOS;
+
+      if (isMobile) {
+        // Crop image on mobile platforms
+        final croppedFile = await ImageCropper().cropImage(
+          sourcePath: pickedFile.path,
+          aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+          uiSettings: [
+            AndroidUiSettings(
+              toolbarTitle: 'Potong ke 1:1',
+              toolbarColor: AppTheme.primary,
+              toolbarWidgetColor: Colors.white,
+              initAspectRatio: CropAspectRatioPreset.square,
+              lockAspectRatio: true,
+            ),
+            IOSUiSettings(
+              title: 'Potong ke 1:1',
+              aspectRatioLockEnabled: true,
+              resetAspectRatioEnabled: false,
+            ),
+          ],
+        );
+
+        if (croppedFile != null && mounted) {
+          setState(() {
+            _selectedImagePath = croppedFile.path;
+          });
+        }
+      } else {
+        // Use image as-is on desktop/web platforms
         setState(() {
-          _selectedImagePath = croppedFile.path;
+          _selectedImagePath = pickedFile.path;
         });
       }
     }
@@ -116,7 +132,7 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
     );
 
     await DatabaseHelper().insertProduct(newProduct);
-    
+
     if (!mounted) return;
 
     _nameController.clear();
@@ -125,20 +141,257 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
     setState(() {
       _selectedImagePath = null;
     });
-    
+
     // Hide keyboard
     FocusScope.of(context).unfocus();
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Produk berhasil ditambahkan!'), backgroundColor: Colors.green),
+      const SnackBar(
+        content: Text('Produk berhasil ditambahkan!'),
+        backgroundColor: Colors.green,
+      ),
     );
 
     _loadProducts();
   }
 
+  Future<void> _showResetDialog(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: EdgeInsets.zero,
+        content: Container(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.errorContainer.withValues(alpha: 0.2),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.error.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.warning_amber_rounded,
+                        color: AppTheme.error,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Reset Semua Data',
+                            style: TextStyle(
+                              fontFamily: 'Plus Jakarta Sans',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              color: AppTheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            'Tindakan ini tidak dapat dibatalkan',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Apakah Anda yakin ingin mereset semua data?',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildResetItem(
+                            'Semua data penjualan',
+                            Icons.shopping_cart,
+                          ),
+                          const SizedBox(height: 8),
+                          _buildResetItem(
+                            'Semua pemasukan',
+                            Icons.account_balance_wallet,
+                          ),
+                          const SizedBox(height: 8),
+                          _buildResetItem('Semua pengeluaran', Icons.money_off),
+                          const SizedBox(height: 8),
+                          _buildResetItem('Semua produk', Icons.inventory_2),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '⚠️ Data yang sudah direset tidak dapat dikembalikan!',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.error,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Actions
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.onSurfaceVariant,
+                          side: BorderSide(color: AppTheme.outlineVariant),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          'Batal',
+                          style: TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppTheme.error, Color(0xFFD32F2F)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.error.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => Navigator.pop(context, true),
+                            child: const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 14),
+                                child: Text(
+                                  'Ya, Reset Semua',
+                                  style: TextStyle(
+                                    fontFamily: 'Plus Jakarta Sans',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed == true) {
+      await _resetAllData();
+    }
+  }
+
+  Widget _buildResetItem(String label, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppTheme.error),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(fontSize: 13, color: AppTheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _resetAllData() async {
+    try {
+      await DatabaseHelper().resetAllData();
+      GlobalSync.instance.notify();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Semua data berhasil direset'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      _loadProducts();
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mereset data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _tambahStok(Product product) async {
     final TextEditingController stokCtrl = TextEditingController();
-    
+
     final updated = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -166,7 +419,10 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
               final added = int.tryParse(stokCtrl.text.trim()) ?? 0;
               if (added > 0) {
                 final newStock = product.stock + added;
-                await DatabaseHelper().updateProductStock(product.id!, newStock);
+                await DatabaseHelper().updateProductStock(
+                  product.id!,
+                  newStock,
+                );
                 if (!context.mounted) return;
                 Navigator.pop(context, true);
               } else {
@@ -178,12 +434,15 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
         ],
       ),
     );
-    
+
     if (updated == true && mounted) {
       _loadProducts();
       GlobalSync.instance.notify();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Stok berhasil diperbarui!'), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text('Stok berhasil diperbarui!'),
+          backgroundColor: Colors.green,
+        ),
       );
     }
   }
@@ -216,9 +475,9 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
       if (!mounted) return;
       _loadProducts();
       GlobalSync.instance.notify();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Produk dihapus')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Produk dihapus')));
     }
   }
 
@@ -238,24 +497,76 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 8),
-                // Title
-                Text(
-                  'Katalog Produk',
-                  style: TextStyle(
-                    fontFamily: 'Plus Jakarta Sans',
-                    fontWeight: FontWeight.w800,
-                    fontSize: 28,
-                    color: AppTheme.onSurface,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Kelola varian cookie terbaik Anda',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.onSurfaceVariant,
-                  ),
+                // Title and Reset Button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Katalog Produk',
+                          style: TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            fontWeight: FontWeight.w800,
+                            fontSize: 28,
+                            color: AppTheme.onSurface,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Kelola varian cookie terbaik Anda',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Reset Data Button
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorContainer.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppTheme.error.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _showResetDialog(context),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.delete_sweep,
+                                  size: 20,
+                                  color: AppTheme.error,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Reset Data',
+                                  style: TextStyle(
+                                    fontFamily: 'Plus Jakarta Sans',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                    color: AppTheme.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
 
@@ -269,10 +580,12 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
 
                 // Product List
                 if (_isLoading)
-                  const Center(child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: CircularProgressIndicator(),
-                  ))
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
                 else if (_products.isEmpty)
                   const Center(
                     child: Padding(
@@ -282,7 +595,7 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
                   )
                 else
                   _buildProductList(),
-                  
+
                 const SizedBox(height: 40),
 
                 // Add Product Form
@@ -301,7 +614,9 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
+        border: Border.all(
+          color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+        ),
       ),
       child: Stack(
         children: [
@@ -355,11 +670,18 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
                       );
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.arrow_downward, color: Colors.white, size: 18),
+                          const Icon(
+                            Icons.arrow_downward,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                           const SizedBox(width: 8),
                           const Text(
                             'Isi Formulir',
@@ -450,7 +772,7 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
 
   Widget _productCard(Product product) {
     final bool isHabis = product.stock <= 0;
-    
+
     return Opacity(
       opacity: isHabis ? 0.75 : 1.0,
       child: Container(
@@ -458,7 +780,9 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
         decoration: BoxDecoration(
           color: AppTheme.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.05)),
+          border: Border.all(
+            color: AppTheme.outlineVariant.withValues(alpha: 0.05),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
@@ -473,12 +797,15 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
             Container(
               width: 120,
               decoration: BoxDecoration(
-                color: isHabis ? AppTheme.surfaceContainerHigh : AppTheme.surfaceContainerLow,
+                color: isHabis
+                    ? AppTheme.surfaceContainerHigh
+                    : AppTheme.surfaceContainerLow,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   bottomLeft: Radius.circular(16),
                 ),
-                image: product.imagePath != null && product.imagePath!.isNotEmpty
+                image:
+                    product.imagePath != null && product.imagePath!.isNotEmpty
                     ? DecorationImage(
                         image: FileImage(File(product.imagePath!)),
                         fit: BoxFit.cover,
@@ -550,21 +877,30 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Icon(Icons.inventory_2_outlined, size: 14, color: AppTheme.onSurfaceVariant),
+                                  Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 14,
+                                    color: AppTheme.onSurfaceVariant,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     'Stok: ${product.stock}',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
-                                      color: isHabis ? AppTheme.error : AppTheme.onSurfaceVariant,
+                                      color: isHabis
+                                          ? AppTheme.error
+                                          : AppTheme.onSurfaceVariant,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   // Tambah Stok Button
                                   ElevatedButton.icon(
                                     onPressed: () => _tambahStok(product),
-                                    icon: const Icon(Icons.add_circle, size: 18),
+                                    icon: const Icon(
+                                      Icons.add_circle,
+                                      size: 18,
+                                    ),
                                     label: const Text(
                                       'Stok',
                                       style: TextStyle(
@@ -573,10 +909,14 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
                                       ),
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.tertiary.withValues(alpha: 0.1),
+                                      backgroundColor: AppTheme.tertiary
+                                          .withValues(alpha: 0.1),
                                       foregroundColor: AppTheme.tertiary,
                                       elevation: 0,
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
                                       minimumSize: const Size(0, 36),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
@@ -670,7 +1010,9 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppTheme.outlineVariant.withValues(alpha: 0.1)),
+            border: Border.all(
+              color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -679,7 +1021,10 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
               _fieldLabel('NAMA VARIAN'),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(16),
@@ -709,7 +1054,10 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
                         _fieldLabel('HARGA JUAL (RP)'),
                         const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(16),
@@ -733,7 +1081,8 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
                                     hintText: '0',
                                     hintStyle: TextStyle(
                                       fontSize: 14,
-                                      color: AppTheme.onSurfaceVariant.withValues(alpha: 0.5),
+                                      color: AppTheme.onSurfaceVariant
+                                          .withValues(alpha: 0.5),
                                     ),
                                     border: InputBorder.none,
                                   ),
@@ -759,7 +1108,10 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
                         _fieldLabel('STOK AWAL'),
                         const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(16),
@@ -771,7 +1123,9 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
                               hintText: '0',
                               hintStyle: TextStyle(
                                 fontSize: 14,
-                                color: AppTheme.onSurfaceVariant.withValues(alpha: 0.5),
+                                color: AppTheme.onSurfaceVariant.withValues(
+                                  alpha: 0.5,
+                                ),
                               ),
                               border: InputBorder.none,
                             ),
@@ -839,7 +1193,11 @@ class _KatalogPageState extends State<KatalogPage> with AutomaticKeepAliveClient
                             child: CircleAvatar(
                               backgroundColor: Colors.black54,
                               child: IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.white, size: 18),
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
                                 onPressed: _pickImage,
                               ),
                             ),

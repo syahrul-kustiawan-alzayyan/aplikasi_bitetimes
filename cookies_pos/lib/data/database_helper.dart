@@ -177,6 +177,21 @@ class DatabaseHelper {
     return await db.insert('incomes', income.toMap()..remove('id'));
   }
 
+  Future<void> updateIncome(Income income) async {
+    final db = await database;
+    await db.update(
+      'incomes',
+      income.toMap(),
+      where: 'id = ?',
+      whereArgs: [income.id!],
+    );
+  }
+
+  Future<void> deleteIncome(int incomeId) async {
+    final db = await database;
+    await db.delete('incomes', where: 'id = ?', whereArgs: [incomeId]);
+  }
+
   Future<int> getTotalIncome() async {
     final db = await database;
     final result = await db.rawQuery(
@@ -196,6 +211,21 @@ class DatabaseHelper {
   Future<int> insertExpense(Expense expense) async {
     final db = await database;
     return await db.insert('expenses', expense.toMap()..remove('id'));
+  }
+
+  Future<void> updateExpense(Expense expense) async {
+    final db = await database;
+    await db.update(
+      'expenses',
+      expense.toMap(),
+      where: 'id = ?',
+      whereArgs: [expense.id!],
+    );
+  }
+
+  Future<void> deleteExpense(int expenseId) async {
+    final db = await database;
+    await db.delete('expenses', where: 'id = ?', whereArgs: [expenseId]);
   }
 
   Future<int> getTotalExpense() async {
@@ -537,5 +567,29 @@ class DatabaseHelper {
       orderBy: 'date DESC',
     );
     return maps.map((m) => Expense.fromMap(m)).toList();
+  }
+
+  // ── Reset All Data ─────────────────────────────────────────────────────
+
+  Future<void> resetAllData() async {
+    final db = await database;
+
+    // Start a transaction to ensure all operations succeed or fail together
+    await db.transaction((txn) async {
+      // Delete all sale items first (foreign key constraint)
+      await txn.delete('sale_items');
+
+      // Delete all sales
+      await txn.delete('sales');
+
+      // Delete all incomes
+      await txn.delete('incomes');
+
+      // Delete all expenses
+      await txn.delete('expenses');
+
+      // Delete all products
+      await txn.delete('products');
+    });
   }
 }

@@ -179,8 +179,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
 
     if (!mounted) return;
 
-    _amountController.clear();
-    _notesController.clear();
+    _clearForm();
     FocusScope.of(context).unfocus();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -191,6 +190,120 @@ class _PengeluaranPageState extends State<PengeluaranPage>
     );
 
     _loadData();
+  }
+
+  void _clearForm() {
+    _amountController.clear();
+    _notesController.clear();
+    _selectedDate = DateTime.now();
+    _selectedCategory = 'Lainnya';
+  }
+
+  Future<void> _editExpense(Expense expense) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => _EditExpenseDialog(expense: expense),
+    );
+
+    if (result != null) {
+      final updatedExpense = Expense(
+        id: expense.id,
+        amount: result['amount'] as int,
+        category: result['category'] as String,
+        description: result['description'] as String,
+        date: (result['date'] as DateTime).toIso8601String(),
+      );
+
+      await DatabaseHelper().updateExpense(updatedExpense);
+      GlobalSync.instance.notify();
+      _loadData();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pengeluaran berhasil diperbarui'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteExpense(Expense expense) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppTheme.error, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              'Hapus Pengeluaran?',
+              style: TextStyle(
+                fontFamily: 'Plus Jakarta Sans',
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: AppTheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus pengeluaran ini?\n\n"${expense.description}"\n\nNominal: ${_formatCurrency(expense.amount)}',
+          style: TextStyle(fontSize: 14, color: AppTheme.onSurfaceVariant),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Batal',
+              style: TextStyle(color: AppTheme.onSurfaceVariant),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.error,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => Navigator.pop(context, true),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Text(
+                    'Hapus',
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await DatabaseHelper().deleteExpense(expense.id!);
+      GlobalSync.instance.notify();
+      _loadData();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pengeluaran berhasil dihapus'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -713,10 +826,13 @@ class _PengeluaranPageState extends State<PengeluaranPage>
               final exp =
                   _expenses[_expenses.length - 1 - index]; // Newest first
               return _expenseItem(
+                expense: exp,
                 icon: Icons.receipt_long_outlined,
                 title: exp.description,
                 date: '${_formatDate(exp.date)} • ${exp.category}',
                 amount: exp.amount,
+                onEdit: () => _editExpense(exp),
+                onDelete: () => _deleteExpense(exp),
               );
             },
           ),
@@ -749,10 +865,13 @@ class _PengeluaranPageState extends State<PengeluaranPage>
   }
 
   Widget _expenseItem({
+    required Expense expense,
     required IconData icon,
     required String title,
     required String date,
     required int amount,
+    VoidCallback? onEdit,
+    VoidCallback? onDelete,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -808,24 +927,492 @@ class _PengeluaranPageState extends State<PengeluaranPage>
                 ),
               ),
               const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(9999),
-                ),
-                child: Text(
-                  'LUNAS',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.onSecondaryContainer,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InkWell(
+                    onTap: onEdit,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.edit,
+                        size: 14,
+                        color: AppTheme.primary,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: onDelete,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.delete,
+                        size: 14,
+                        color: AppTheme.error,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EditExpenseDialog extends StatefulWidget {
+  final Expense expense;
+
+  const _EditExpenseDialog({required this.expense});
+
+  @override
+  State<_EditExpenseDialog> createState() => _EditExpenseDialogState();
+}
+
+class _EditExpenseDialogState extends State<_EditExpenseDialog> {
+  late TextEditingController _amountController;
+  late TextEditingController _notesController;
+  late DateTime _selectedDate;
+  late String _selectedCategory;
+  final List<String> _expenseCategories = [
+    'Bahan Baku',
+    'Gaji Kasir',
+    'Operasional',
+    'Listrik',
+    'Lainnya',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(
+      text: widget.expense.amount.toString(),
+    );
+    _notesController = TextEditingController(text: widget.expense.description);
+    _selectedDate = DateTime.parse(widget.expense.date);
+    _selectedCategory = widget.expense.category;
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primary,
+              onPrimary: Colors.white,
+              onSurface: AppTheme.onSurface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  void _save() {
+    final amountStr = _amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final amount = int.tryParse(amountStr) ?? 0;
+
+    if (amount <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Nominal tidak valid')));
+      return;
+    }
+
+    Navigator.pop(context, {
+      'amount': amount,
+      'category': _selectedCategory,
+      'description': _notesController.text.trim().isEmpty
+          ? 'Pengeluaran Manual'
+          : _notesController.text.trim(),
+      'date': _selectedDate,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      contentPadding: EdgeInsets.zero,
+      content: Container(
+        width: double.maxFinite,
+        constraints: const BoxConstraints(maxWidth: 500),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.errorContainer.withValues(alpha: 0.2),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.error.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        color: AppTheme.error,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Edit Pengeluaran',
+                            style: TextStyle(
+                              fontFamily: 'Plus Jakarta Sans',
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              color: AppTheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            'Ubah data pengeluaran',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      color: AppTheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Form
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Nominal
+                    _fieldLabel('NOMINAL (RP)'),
+                    SizedBox(height: 8),
+                    _buildAmountField(),
+                    SizedBox(height: 20),
+
+                    // Tanggal & Kategori
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _fieldLabel('TANGGAL'),
+                              SizedBox(height: 8),
+                              _buildDateField(),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _fieldLabel('KATEGORI'),
+                              SizedBox(height: 8),
+                              _buildCategoryField(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 20),
+
+                    // Keterangan
+                    _fieldLabel('KETERANGAN'),
+                    SizedBox(height: 8),
+                    _buildNotesField(),
+                  ],
+                ),
+              ),
+
+              // Action Buttons
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.onSurfaceVariant,
+                          side: BorderSide(color: AppTheme.outlineVariant),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text(
+                          'Batal',
+                          style: TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(flex: 2, child: _buildSaveButton()),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fieldLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppTheme.onSurfaceVariant,
+          letterSpacing: 1.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAmountField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Rp',
+            style: TextStyle(
+              fontFamily: 'Plus Jakarta Sans',
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.error,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              style: TextStyle(
+                fontFamily: 'Plus Jakarta Sans',
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.onSurface,
+              ),
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                hintText: '0',
+                hintStyle: TextStyle(color: AppTheme.onSurfaceVariant),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateField() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _selectDate(context),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Text(
+                DateFormat('dd/MM/yyyy').format(_selectedDate),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.onSurface,
+                ),
+              ),
+              const Spacer(),
+              Icon(
+                Icons.calendar_today,
+                size: 16,
+                color: AppTheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedCategory,
+          isExpanded: true,
+          icon: Icon(
+            Icons.expand_more,
+            size: 20,
+            color: AppTheme.onSurfaceVariant,
+          ),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.onSurface,
+          ),
+          onChanged: (String? newValue) {
+            if (newValue != null) {
+              setState(() {
+                _selectedCategory = newValue;
+              });
+            }
+          },
+          items: _expenseCategories.map<DropdownMenuItem<String>>((
+            String value,
+          ) {
+            return DropdownMenuItem<String>(value: value, child: Text(value));
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotesField() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      height: 80,
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: TextField(
+        controller: _notesController,
+        maxLines: null,
+        style: TextStyle(
+          fontFamily: 'Plus Jakarta Sans',
+          fontSize: 14,
+          color: AppTheme.onSurface,
+        ),
+        decoration: const InputDecoration(
+          border: InputBorder.none,
+          hintText: 'Tulis keterangan di sini...',
+          hintStyle: TextStyle(
+            fontFamily: 'Plus Jakarta Sans',
+            color: AppTheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppTheme.error, Color(0xFFD32F2F)],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.error.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: _save,
+          child: const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Text(
+                'Simpan Perubahan',
+                style: TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
