@@ -5,6 +5,7 @@ import '../widgets/app_top_bar.dart';
 import '../data/database_helper.dart';
 import '../data/models.dart';
 import '../utils/global_sync.dart';
+import '../widgets/app_toast.dart';
 
 class PreOrderPage extends StatefulWidget {
   const PreOrderPage({super.key});
@@ -723,26 +724,12 @@ class _PreOrderPageState extends State<PreOrderPage>
         GlobalSync.instance.notify();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                '\u2713 Pre-Order berhasil diselesaikan! Pemasukan otomatis ditambahkan.',
-              ),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
+          AppToast.success(context, 'Pre-Order berhasil diselesaikan! Pemasukan otomatis ditambahkan.');
           _loadData();
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('\u2715 Gagal menyelesaikan pre-order: $e'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          AppToast.error(context, 'Gagal menyelesaikan pre-order: $e');
         }
       }
     }
@@ -777,12 +764,7 @@ class _PreOrderPageState extends State<PreOrderPage>
       await DatabaseHelper().deletePreOrder(preOrder.id!);
       GlobalSync.instance.notify();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pre-Order dihapus'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        AppToast.info(context, 'Pre-Order berhasil dihapus');
         _loadData();
       }
     }

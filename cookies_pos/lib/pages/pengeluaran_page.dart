@@ -5,6 +5,7 @@ import '../widgets/app_top_bar.dart';
 import '../data/database_helper.dart';
 import '../data/models.dart';
 import '../utils/global_sync.dart';
+import '../widgets/app_toast.dart';
 import 'riwayat_page.dart';
 
 class PengeluaranPage extends StatefulWidget {
@@ -161,9 +162,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
     final notes = _notesController.text.trim();
 
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nominal pengeluaran tidak valid')),
-      );
+      AppToast.warning(context, 'Nominal pengeluaran tidak valid');
       return;
     }
 
@@ -182,12 +181,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
     _clearForm();
     FocusScope.of(context).unfocus();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Pengeluaran berhasil dicatat'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    AppToast.success(context, 'Pengeluaran berhasil dicatat');
 
     _loadData();
   }
@@ -219,12 +213,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
       _loadData();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pengeluaran berhasil diperbarui'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        AppToast.success(context, 'Pengeluaran berhasil diperbarui');
       }
     }
   }
@@ -296,12 +285,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
       _loadData();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pengeluaran berhasil dihapus'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        AppToast.info(context, 'Pengeluaran berhasil dihapus');
       }
     }
   }
@@ -1050,9 +1034,7 @@ class _EditExpenseDialogState extends State<_EditExpenseDialog> {
     final amount = int.tryParse(amountStr) ?? 0;
 
     if (amount <= 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Nominal tidak valid')));
+      AppToast.warning(context, 'Nominal tidak valid');
       return;
     }
 

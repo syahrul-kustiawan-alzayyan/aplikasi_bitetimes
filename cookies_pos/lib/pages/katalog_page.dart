@@ -8,6 +8,7 @@ import '../widgets/app_top_bar.dart';
 import '../data/database_helper.dart';
 import '../data/models.dart';
 import '../utils/global_sync.dart';
+import '../widgets/app_toast.dart';
 
 class KatalogPage extends StatefulWidget {
   const KatalogPage({super.key});
@@ -152,9 +153,7 @@ class _KatalogPageState extends State<KatalogPage>
     final stockStr = _stockController.text.trim();
 
     if (name.isEmpty || priceStr.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nama dan Harga produk harus diisi!')),
-      );
+      AppToast.warning(context, 'Nama dan Harga produk harus diisi!');
       return;
     }
 
@@ -182,12 +181,7 @@ class _KatalogPageState extends State<KatalogPage>
     // Hide keyboard
     FocusScope.of(context).unfocus();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Produk berhasil ditambahkan!'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    AppToast.success(context, 'Produk berhasil ditambahkan!');
 
     _loadProducts();
   }
@@ -442,23 +436,13 @@ class _KatalogPageState extends State<KatalogPage>
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Semua data berhasil direset'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      AppToast.success(context, 'Semua data berhasil direset');
 
       _loadProducts();
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal mereset data: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppToast.error(context, 'Gagal mereset data: $e');
     }
   }
 
@@ -511,12 +495,7 @@ class _KatalogPageState extends State<KatalogPage>
     if (updated == true && mounted) {
       _loadProducts();
       GlobalSync.instance.notify();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Stok berhasil diperbarui!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      AppToast.success(context, 'Stok berhasil diperbarui!');
     }
   }
 
@@ -548,9 +527,7 @@ class _KatalogPageState extends State<KatalogPage>
       if (!mounted) return;
       _loadProducts();
       GlobalSync.instance.notify();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Produk dihapus')));
+      AppToast.info(context, 'Produk berhasil dihapus');
     }
   }
 

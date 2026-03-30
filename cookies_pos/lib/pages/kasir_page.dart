@@ -7,6 +7,7 @@ import '../widgets/app_top_bar.dart';
 import '../data/database_helper.dart';
 import '../data/models.dart';
 import '../utils/global_sync.dart';
+import '../widgets/app_toast.dart';
 
 class KasirPage extends StatefulWidget {
   const KasirPage({super.key});
@@ -75,9 +76,7 @@ class _KasirPageState extends State<KasirPage>
 
   void _showProsesPesananPopup() {
     if (_cart.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Keranjang masih kosong!')));
+      AppToast.warning(context, 'Keranjang masih kosong!');
       return;
     }
 
@@ -434,12 +433,7 @@ class _KasirPageState extends State<KasirPage>
   Future<void> _savePreOrder() async {
     final customerName = _customerNameController.text.trim();
     if (customerName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nama pelanggan harus diisi!'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppToast.error(context, 'Nama pelanggan harus diisi!');
       return;
     }
 
@@ -474,15 +468,7 @@ class _KasirPageState extends State<KasirPage>
     GlobalSync.instance.notify();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '\u2713 Pre-Order untuk $customerName berhasil disimpan!',
-          ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      AppToast.success(context, 'Pre-Order untuk $customerName berhasil disimpan!');
     }
   }
 
@@ -543,12 +529,7 @@ class _KasirPageState extends State<KasirPage>
     GlobalSync.instance.notify();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pesanan berhasil diproses!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      AppToast.success(context, 'Pesanan berhasil diproses!');
     }
   }
 
@@ -1044,9 +1025,7 @@ class _KasirPageState extends State<KasirPage>
                         _cart[productId] = qty + 1;
                       });
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Stok tidak mencukupi!')),
-                      );
+                      AppToast.warning(context, 'Stok tidak mencukupi!');
                     }
                   },
                   child: Container(
