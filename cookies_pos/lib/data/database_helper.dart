@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'models.dart';
@@ -22,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -31,6 +32,22 @@ class DatabaseHelper {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE products ADD COLUMN imagePath TEXT');
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE pre_orders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customerName TEXT NOT NULL,
+          items TEXT NOT NULL,
+          totalAmount INTEGER NOT NULL,
+          createdAt TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending'
+        )
+      ''');
+    }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE pre_orders ADD COLUMN completedAt TEXT NOT NULL DEFAULT \'\'');
+      await db.execute('ALTER TABLE pre_orders ADD COLUMN paymentMethod TEXT NOT NULL DEFAULT \'Cash\'');
     }
   }
 
@@ -87,6 +104,19 @@ class DatabaseHelper {
         date TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE pre_orders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customerName TEXT NOT NULL,
+        items TEXT NOT NULL,
+        totalAmount INTEGER NOT NULL,
+        createdAt TEXT NOT NULL,
+        completedAt TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'pending',
+        paymentMethod TEXT NOT NULL DEFAULT 'Cash'
+      )
+    ''');
   }
 
   // ── Products ──────────────────────────────────────────────────────────
@@ -140,6 +170,112 @@ class DatabaseHelper {
     }
 
     return saleId;
+  }
+
+  /// Complete a PreOrder by creating a sale record with items
+  /// Returns the sale ID on success
+  Future<int> completePreOrder(PreOrder preOrder, String paymentMethod) async {
+    final db = await database;
+    final items = _parsePreOrderItems(preOrder.itemsJson);
+
+    // Create sale record
+    final sale = Sale(
+      totalAmount: preOrder.totalAmount,
+      paymentMethod: paymentMethod,
+      createdAt: DateTime.now().toIso8601String(),
+    );
+
+    final saleId = await db.insert('sales', sale.toMap()..remove('id'));
+
+    // Insert sale items and decrease stock
+    for (final item in items) {
+      await db.insert('sale_items', {
+        'saleId': saleId,
+        'productId': item['productId'] as int,
+        'productName': item['name'] as String,
+        'price': item['price'] as int,
+        'quantity': item['quantity'] as int,
+      });
+
+      // Decrease stock
+      await db.rawUpdate('UPDATE products SET stock = stock - ? WHERE id = ?', [
+        item['quantity'] as int,
+        item['productId'] as int,
+      ]);
+    }
+
+    // Update pre-order status to completed
+    await db.update(
+      'pre_orders',
+      {'status': 'completed'},
+      where: 'id = ?',
+      whereArgs: [preOrder.id],
+    );
+
+    return saleId;
+  }
+
+  /// Complete a PreOrder by ID (legacy signature for backward compatibility)
+  /// This creates a sale record with items from the pre-order
+  Future<void> completePreOrderById(int id, String completedAt) async {
+    final db = await database;
+
+    // Get the pre-order
+    final preOrders = await db.query(
+      'pre_orders',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (preOrders.isEmpty) return;
+
+    final preOrder = PreOrder.fromMap(preOrders.first);
+    final items = _parsePreOrderItems(preOrder.itemsJson);
+
+    // Create sale record
+    final sale = Sale(
+      totalAmount: preOrder.totalAmount,
+      paymentMethod: 'PreOrder',
+      createdAt: DateTime.now().toIso8601String(),
+    );
+
+    final saleId = await db.insert('sales', sale.toMap()..remove('id'));
+
+    // Insert sale items and decrease stock
+    for (final item in items) {
+      await db.insert('sale_items', {
+        'saleId': saleId,
+        'productId': item['productId'] as int,
+        'productName': item['name'] as String,
+        'price': item['price'] as int,
+        'quantity': item['quantity'] as int,
+      });
+
+      // Decrease stock
+      await db.rawUpdate('UPDATE products SET stock = stock - ? WHERE id = ?', [
+        item['quantity'] as int,
+        item['productId'] as int,
+      ]);
+    }
+
+    // Update pre-order status to completed
+    await db.update(
+      'pre_orders',
+      {'status': 'completed'},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Parse PreOrder items from JSON string
+  List<Map<String, dynamic>> _parsePreOrderItems(String itemsJson) {
+    try {
+      return List<Map<String, dynamic>>.from(
+        json.decode(itemsJson) as List<dynamic>,
+      );
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<List<Sale>> getSales() async {
@@ -569,6 +705,39 @@ class DatabaseHelper {
     return maps.map((m) => Expense.fromMap(m)).toList();
   }
 
+  // ── PreOrders ──────────────────────────────────────────────────────────
+
+  Future<List<PreOrder>> getPreOrders({String? status}) async {
+    final db = await database;
+    final maps = await db.query(
+      'pre_orders',
+      where: status != null ? 'status = ?' : null,
+      whereArgs: status != null ? [status] : null,
+      orderBy: 'createdAt DESC',
+    );
+    return maps.map((m) => PreOrder.fromMap(m)).toList();
+  }
+
+  Future<int> insertPreOrder(PreOrder preOrder) async {
+    final db = await database;
+    return await db.insert('pre_orders', preOrder.toMap()..remove('id'));
+  }
+
+  Future<void> updatePreOrderStatus(int id, String status) async {
+    final db = await database;
+    await db.update(
+      'pre_orders',
+      {'status': status},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> deletePreOrder(int id) async {
+    final db = await database;
+    await db.delete('pre_orders', where: 'id = ?', whereArgs: [id]);
+  }
+
   // ── Reset All Data ─────────────────────────────────────────────────────
 
   Future<void> resetAllData() async {
@@ -581,6 +750,9 @@ class DatabaseHelper {
 
       // Delete all sales
       await txn.delete('sales');
+
+      // Delete all pre_orders
+      await txn.delete('pre_orders');
 
       // Delete all incomes
       await txn.delete('incomes');

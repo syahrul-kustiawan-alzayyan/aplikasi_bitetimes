@@ -386,6 +386,42 @@ class _KatalogPageState extends State<KatalogPage>
     }
   }
 
+  Widget _buildResetButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.errorContainer.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _showResetDialog(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.delete_sweep, size: 18, color: AppTheme.error),
+                const SizedBox(width: 6),
+                Text(
+                  'Reset Data',
+                  style: TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    color: AppTheme.error,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildResetItem(String label, IconData icon) {
     return Row(
       children: [
@@ -529,83 +565,82 @@ class _KatalogPageState extends State<KatalogPage>
         children: [
           const AppTopBar(title: 'BiteTimes'),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 8),
                 // Title and Reset Button
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < 400;
+                    return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Katalog Produk',
-                          style: TextStyle(
-                            fontFamily: 'Plus Jakarta Sans',
-                            fontWeight: FontWeight.w800,
-                            fontSize: 28,
-                            color: AppTheme.onSurface,
-                            letterSpacing: -0.5,
+                        if (!isNarrow)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Katalog Produk',
+                                      style: TextStyle(
+                                        fontFamily: 'Plus Jakarta Sans',
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 24,
+                                        color: AppTheme.onSurface,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Kelola varian cookie terbaik Anda',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppTheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              _buildResetButton(),
+                            ],
+                          )
+                        else
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Katalog Produk',
+                                style: TextStyle(
+                                  fontFamily: 'Plus Jakarta Sans',
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 22,
+                                  color: AppTheme.onSurface,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Kelola varian cookie terbaik Anda',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.onSurfaceVariant,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildResetButton(),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Kelola varian cookie terbaik Anda',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.onSurfaceVariant,
-                          ),
-                        ),
                       ],
-                    ),
-                    // Reset Data Button
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.errorContainer.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppTheme.error.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => _showResetDialog(context),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.delete_sweep,
-                                  size: 20,
-                                  color: AppTheme.error,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Reset Data',
-                                  style: TextStyle(
-                                    fontFamily: 'Plus Jakarta Sans',
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                    color: AppTheme.error,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Hero Card
                 _buildHeroCard(),
@@ -902,10 +937,10 @@ class _KatalogPageState extends State<KatalogPage>
     return Opacity(
       opacity: isHabis ? 0.75 : 1.0,
       child: Container(
-        height: 120,
+        height: 110,
         decoration: BoxDecoration(
           color: AppTheme.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: AppTheme.outlineVariant.withValues(alpha: 0.05),
           ),
@@ -921,14 +956,14 @@ class _KatalogPageState extends State<KatalogPage>
           children: [
             // Image placeholder
             Container(
-              width: 120,
+              width: 110,
               decoration: BoxDecoration(
                 color: isHabis
                     ? AppTheme.surfaceContainerHigh
                     : AppTheme.surfaceContainerLow,
                 borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
+                  topLeft: Radius.circular(14),
+                  bottomLeft: Radius.circular(14),
                 ),
                 image:
                     product.imagePath != null && product.imagePath!.isNotEmpty
@@ -944,7 +979,7 @@ class _KatalogPageState extends State<KatalogPage>
                     Center(
                       child: Icon(
                         Icons.cookie,
-                        size: 40,
+                        size: 36,
                         color: AppTheme.onSurfaceVariant.withValues(alpha: 0.2),
                       ),
                     ),
@@ -954,8 +989,8 @@ class _KatalogPageState extends State<KatalogPage>
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.2),
                           borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(16),
-                            bottomLeft: Radius.circular(16),
+                            topLeft: Radius.circular(14),
+                            bottomLeft: Radius.circular(14),
                           ),
                         ),
                         child: Center(
@@ -964,7 +999,7 @@ class _KatalogPageState extends State<KatalogPage>
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
-                              fontSize: 10,
+                              fontSize: 9,
                               letterSpacing: 2,
                             ),
                           ),
@@ -976,77 +1011,56 @@ class _KatalogPageState extends State<KatalogPage>
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 product.name,
                                 style: TextStyle(
                                   fontFamily: 'Plus Jakarta Sans',
                                   fontWeight: FontWeight.w700,
-                                  fontSize: 15,
+                                  fontSize: 13,
                                   color: AppTheme.onSurface,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 2),
                               Row(
                                 children: [
                                   Icon(
                                     Icons.inventory_2_outlined,
-                                    size: 14,
+                                    size: 12,
                                     color: AppTheme.onSurfaceVariant,
                                   ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Stok: ${product.stock}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: isHabis
-                                          ? AppTheme.error
-                                          : AppTheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Tambah Stok Button
-                                  ElevatedButton.icon(
-                                    onPressed: () => _tambahStok(product),
-                                    icon: const Icon(
-                                      Icons.add_circle,
-                                      size: 18,
-                                    ),
-                                    label: const Text(
-                                      'Stok',
+                                  const SizedBox(width: 2),
+                                  Flexible(
+                                    child: Text(
+                                      'Stok: ${product.stock}',
                                       style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: isHabis
+                                            ? AppTheme.error
+                                            : AppTheme.onSurfaceVariant,
                                       ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.tertiary
-                                          .withValues(alpha: 0.1),
-                                      foregroundColor: AppTheme.tertiary,
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      minimumSize: const Size(0, 36),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -1054,34 +1068,61 @@ class _KatalogPageState extends State<KatalogPage>
                             ],
                           ),
                         ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              onTap: () => _hapusProduk(product),
-                              child: Padding(
-                                padding: const EdgeInsets.all(4),
-                                child: Icon(
-                                  Icons.delete,
-                                  size: 18,
-                                  color: AppTheme.error,
-                                ),
-                              ),
+                        const SizedBox(width: 4),
+                        // Tambah Stok Button
+                        ElevatedButton.icon(
+                          onPressed: () => _tambahStok(product),
+                          icon: const Icon(Icons.add_circle, size: 14),
+                          label: const Text(
+                            'Stok',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
                             ),
-                          ],
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.tertiary.withValues(
+                              alpha: 0.1,
+                            ),
+                            foregroundColor: AppTheme.tertiary,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            minimumSize: const Size(0, 28),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => _hapusProduk(product),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.errorContainer.withValues(
+                                alpha: 0.1,
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(
+                              Icons.delete,
+                              size: 16,
+                              color: AppTheme.error,
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: Text(
-                        _formatCurrency(product.price),
-                        style: TextStyle(
-                          fontFamily: 'Plus Jakarta Sans',
-                          fontWeight: FontWeight.w800,
-                          fontSize: 18,
-                          color: AppTheme.primary,
-                        ),
+                    Text(
+                      _formatCurrency(product.price),
+                      style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: AppTheme.primary,
                       ),
                     ),
                   ],

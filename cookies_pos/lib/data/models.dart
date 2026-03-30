@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Product {
   final int? id;
   final String name;
@@ -136,6 +138,7 @@ class Income {
   final String source;
   final String description;
   final String date;
+  final String? paymentMethod;
 
   Income({
     this.id,
@@ -143,6 +146,7 @@ class Income {
     required this.source,
     required this.description,
     required this.date,
+    this.paymentMethod,
   });
 
   Map<String, dynamic> toMap() {
@@ -198,6 +202,91 @@ class Expense {
       category: map['category'] as String,
       description: map['description'] as String,
       date: map['date'] as String,
+    );
+  }
+}
+
+class PreOrderItem {
+  final int productId;
+  final String productName;
+  final int price;
+  final int quantity;
+
+  PreOrderItem({
+    required this.productId,
+    required this.productName,
+    required this.price,
+    required this.quantity,
+  });
+
+  factory PreOrderItem.fromMap(Map<String, dynamic> map) {
+    return PreOrderItem(
+      productId: (map['productId'] ?? 0) as int,
+      productName: (map['name'] ?? map['productName'] ?? '') as String,
+      price: (map['price'] ?? 0) as int,
+      quantity: (map['quantity'] ?? 0) as int,
+    );
+  }
+}
+
+class PreOrder {
+  final int? id;
+  final String customerName;
+  final String itemsJson; // Raw JSON string stored in DB
+  final List<PreOrderItem> items; // Parsed list of items
+  final int totalAmount;
+  final String createdAt;
+  final String completedAt;
+  final String status; // 'pending' or 'completed'
+  final String paymentMethod;
+
+  PreOrder({
+    this.id,
+    required this.customerName,
+    required this.itemsJson,
+    List<PreOrderItem>? items,
+    required this.totalAmount,
+    required this.createdAt,
+    this.completedAt = '',
+    this.status = 'pending',
+    this.paymentMethod = 'Cash',
+  }) : items = items ?? _parseItems(itemsJson);
+
+  static List<PreOrderItem> _parseItems(String json) {
+    try {
+      final list = jsonDecode(json) as List<dynamic>;
+      return list
+          .map((e) => PreOrderItem.fromMap(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'customerName': customerName,
+      'items': itemsJson,
+      'totalAmount': totalAmount,
+      'createdAt': createdAt,
+      'completedAt': completedAt,
+      'status': status,
+      'paymentMethod': paymentMethod,
+    };
+  }
+
+  factory PreOrder.fromMap(Map<String, dynamic> map) {
+    final itemsStr = map['items'] as String;
+    return PreOrder(
+      id: map['id'] as int?,
+      customerName: map['customerName'] as String,
+      itemsJson: itemsStr,
+      totalAmount: map['totalAmount'] as int,
+      createdAt: map['createdAt'] as String,
+      completedAt: (map['completedAt'] as String?) ?? '',
+      status: map['status'] as String,
+      paymentMethod: (map['paymentMethod'] as String?) ?? 'Cash',
     );
   }
 }

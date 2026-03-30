@@ -462,37 +462,250 @@ class _PreOrderPageState extends State<PreOrderPage>
   }
 
   Future<void> _completePreOrder(PreOrder preOrder) async {
-    final confirmed = await showDialog<bool>(
+    String selectedPayment = 'Cash';
+
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Selesaikan Pre-Order'),
-        content: Text(
-          'Tandai pre-order atas nama ${preOrder.customerName} sebagai selesai? '
-          'Pemasukan akan otomatis ditambahkan sebesar ${_formatCurrency(preOrder.totalAmount)}.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.tertiary,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Selesai'),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainerLowest,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                top: 24,
+                left: 24,
+                right: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.tertiary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.check_circle_outline,
+                              color: AppTheme.tertiary,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text(
+                            'Selesaikan Pre-Order',
+                            style: TextStyle(
+                              fontFamily: 'Plus Jakarta Sans',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context, false),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Order Info
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.person_outline, size: 18, color: AppTheme.onSurfaceVariant),
+                            const SizedBox(width: 8),
+                            Text(
+                              preOrder.customerName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...preOrder.items.map((item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${item.productName} x${item.quantity}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.onSurfaceVariant,
+                                ),
+                              ),
+                              Text(
+                                _formatCurrency(item.price * item.quantity),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                        const Divider(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                            Text(
+                              _formatCurrency(preOrder.totalAmount),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                                color: AppTheme.tertiary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Payment Method Selection
+                  Text(
+                    'Metode Pembayaran',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: ['Cash', 'QRIS', 'Transfer'].map((method) {
+                      final isSelected = selectedPayment == method;
+                      return Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            right: method != 'Transfer' ? 8 : 0,
+                          ),
+                          child: GestureDetector(
+                            onTap: () {
+                              setModalState(() {
+                                selectedPayment = method;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppTheme.tertiary.withValues(alpha: 0.15)
+                                    : AppTheme.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppTheme.tertiary
+                                      : Colors.transparent,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    method == 'Cash'
+                                        ? Icons.money
+                                        : method == 'QRIS'
+                                            ? Icons.qr_code_2
+                                            : Icons.account_balance,
+                                    size: 20,
+                                    color: isSelected
+                                        ? AppTheme.tertiary
+                                        : AppTheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    method,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected
+                                          ? AppTheme.tertiary
+                                          : AppTheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Complete Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.tertiary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      icon: const Icon(Icons.check_circle, size: 20),
+                      label: const Text(
+                        'Selesaikan & Simpan',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
 
     if (confirmed == true && preOrder.id != null) {
       try {
         final now = DateTime.now().toIso8601String();
 
-        // Update status pre-order menjadi completed
-        await DatabaseHelper().completePreOrder(preOrder.id!, now);
+        // Complete pre-order (creates sale record + decreases stock)
+        await DatabaseHelper().completePreOrder(preOrder, selectedPayment);
 
         // Insert income otomatis
         await DatabaseHelper().insertIncome(
@@ -502,7 +715,7 @@ class _PreOrderPageState extends State<PreOrderPage>
             description:
                 'Pre-Order ${preOrder.customerName} - ${preOrder.items.length} item',
             date: now,
-            paymentMethod: preOrder.paymentMethod,
+            paymentMethod: selectedPayment,
           ),
         );
 
@@ -513,7 +726,7 @@ class _PreOrderPageState extends State<PreOrderPage>
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                '✓ Pre-Order berhasil diselesaikan! Pemasukan otomatis ditambahkan.',
+                '\u2713 Pre-Order berhasil diselesaikan! Pemasukan otomatis ditambahkan.',
               ),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
@@ -525,7 +738,7 @@ class _PreOrderPageState extends State<PreOrderPage>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('✕ Gagal menyelesaikan pre-order: $e'),
+              content: Text('\u2715 Gagal menyelesaikan pre-order: $e'),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 3),
             ),

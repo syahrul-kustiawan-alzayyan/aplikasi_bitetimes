@@ -341,7 +341,7 @@ class _DashboardPageState extends State<DashboardPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: colors.first.withValues(alpha: 0.3),
+            color: colors.first.withOpacity(0.3),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -355,7 +355,7 @@ class _DashboardPageState extends State<DashboardPage>
             child: Icon(
               Icons.cookie,
               size: 110,
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withOpacity(0.15),
             ),
           ),
           Padding(
@@ -372,15 +372,11 @@ class _DashboardPageState extends State<DashboardPage>
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Colors.white.withOpacity(0.8),
                         letterSpacing: 2,
                       ),
                     ),
-                    Icon(
-                      icon,
-                      size: 16,
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
+                    Icon(icon, size: 16, color: Colors.white.withOpacity(0.8)),
                   ],
                 ),
                 Column(
@@ -391,7 +387,7 @@ class _DashboardPageState extends State<DashboardPage>
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white.withValues(alpha: 0.6),
+                        color: Colors.white.withOpacity(0.6),
                       ),
                     ),
                     Row(
@@ -418,7 +414,7 @@ class _DashboardPageState extends State<DashboardPage>
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: Colors.white.withOpacity(0.8),
                             ),
                           ),
                         ],
@@ -485,7 +481,7 @@ class _DashboardPageState extends State<DashboardPage>
         border: Border.all(color: badgeColor, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -601,9 +597,7 @@ class _DashboardPageState extends State<DashboardPage>
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppTheme.outlineVariant.withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -660,7 +654,7 @@ class _DashboardPageState extends State<DashboardPage>
                   horizontalInterval: interval,
                   getDrawingHorizontalLine: (value) {
                     return FlLine(
-                      color: AppTheme.outlineVariant.withValues(alpha: 0.2),
+                      color: AppTheme.outlineVariant.withOpacity(0.2),
                       strokeWidth: 1,
                       dashArray: [5, 5],
                     );
@@ -697,9 +691,7 @@ class _DashboardPageState extends State<DashboardPage>
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: AppTheme.onSurfaceVariant.withValues(
-                                alpha: 0.7,
-                              ),
+                              color: AppTheme.onSurfaceVariant.withOpacity(0.7),
                             ),
                             textAlign: TextAlign.right,
                           ),
@@ -720,8 +712,8 @@ class _DashboardPageState extends State<DashboardPage>
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: AppTheme.onSurfaceVariant.withValues(
-                                  alpha: 0.7,
+                                color: AppTheme.onSurfaceVariant.withOpacity(
+                                  0.7,
                                 ),
                               ),
                             ),
@@ -753,7 +745,7 @@ class _DashboardPageState extends State<DashboardPage>
                     ),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: AppTheme.tertiary.withValues(alpha: 0.1),
+                      color: AppTheme.tertiary.withOpacity(0.1),
                     ),
                   ),
                   // Keluar (Pengeluaran)
@@ -774,7 +766,7 @@ class _DashboardPageState extends State<DashboardPage>
                     ),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: AppTheme.error.withValues(alpha: 0.1),
+                      color: AppTheme.error.withOpacity(0.1),
                     ),
                   ),
                 ],
@@ -816,9 +808,7 @@ class _DashboardPageState extends State<DashboardPage>
         decoration: BoxDecoration(
           color: AppTheme.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppTheme.outlineVariant.withValues(alpha: 0.1),
-          ),
+          border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.1)),
         ),
         child: const Center(child: Text("Belum ada data penjualan")),
       );
@@ -866,9 +856,7 @@ class _DashboardPageState extends State<DashboardPage>
           decoration: BoxDecoration(
             color: AppTheme.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppTheme.outlineVariant.withValues(alpha: 0.1),
-            ),
+            border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.1)),
           ),
           child: Column(children: bars),
         ),

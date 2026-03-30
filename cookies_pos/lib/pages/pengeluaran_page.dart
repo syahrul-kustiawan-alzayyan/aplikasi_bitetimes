@@ -476,7 +476,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
         border: Border.all(color: badgeColor, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -537,7 +537,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
               'Catat pengeluaran operasional atau belanja bahan.',
               style: TextStyle(
                 fontSize: 12,
-                color: AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
+                color: AppTheme.onSurfaceVariant.withOpacity(0.7),
               ),
             ),
           ],
@@ -549,7 +549,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
             color: AppTheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+              color: AppTheme.outlineVariant.withOpacity(0.1),
             ),
           ),
           child: Column(
@@ -572,7 +572,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
                       color: AppTheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+                        color: AppTheme.outlineVariant.withOpacity(0.1),
                       ),
                     ),
                     child: Row(
@@ -623,7 +623,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
                     hintText: '0',
                     hintStyle: TextStyle(
                       fontFamily: 'Plus Jakarta Sans',
-                      color: AppTheme.onSurfaceVariant.withValues(alpha: 0.3),
+                      color: AppTheme.onSurfaceVariant.withOpacity(0.3),
                     ),
                   ),
                 ),
@@ -642,7 +642,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
                   color: AppTheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+                    color: AppTheme.outlineVariant.withOpacity(0.1),
                   ),
                 ),
                 child: DropdownButtonHideUnderline(
@@ -704,7 +704,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
                     hintText: 'Contoh: Belanja bahan pack...',
                     hintStyle: TextStyle(
                       fontFamily: 'Plus Jakarta Sans',
-                      color: AppTheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      color: AppTheme.onSurfaceVariant.withOpacity(0.5),
                     ),
                   ),
                 ),
@@ -722,7 +722,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: AppTheme.primary.withValues(alpha: 0.2),
+                        color: AppTheme.primary.withOpacity(0.2),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -879,7 +879,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
         color: AppTheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+          color: AppTheme.outlineVariant.withOpacity(0.1),
         ),
       ),
       child: Row(
@@ -889,7 +889,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppTheme.errorContainer.withValues(alpha: 0.2),
+              color: AppTheme.errorContainer.withOpacity(0.2),
             ),
             child: Icon(icon, color: AppTheme.error, size: 24),
           ),
@@ -939,7 +939,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryContainer.withValues(alpha: 0.3),
+                        color: AppTheme.primaryContainer.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -959,7 +959,7 @@ class _PengeluaranPageState extends State<PengeluaranPage>
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.errorContainer.withValues(alpha: 0.3),
+                        color: AppTheme.errorContainer.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -1083,7 +1083,7 @@ class _EditExpenseDialogState extends State<_EditExpenseDialog> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppTheme.errorContainer.withValues(alpha: 0.2),
+                  color: AppTheme.errorContainer.withOpacity(0.2),
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(20),
                   ),
@@ -1093,7 +1093,7 @@ class _EditExpenseDialogState extends State<_EditExpenseDialog> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppTheme.error.withValues(alpha: 0.2),
+                        color: AppTheme.error.withOpacity(0.2),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -1387,7 +1387,7 @@ class _EditExpenseDialogState extends State<_EditExpenseDialog> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.error.withValues(alpha: 0.3),
+            color: AppTheme.error.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

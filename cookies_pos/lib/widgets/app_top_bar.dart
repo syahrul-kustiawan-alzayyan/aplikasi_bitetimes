@@ -1,11 +1,43 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../utils/global_sync.dart';
+import '../data/database_helper.dart';
+import '../pages/pre_order_page.dart';
 
-class AppTopBar extends StatelessWidget {
+class AppTopBar extends StatefulWidget {
   final String title;
 
   const AppTopBar({super.key, required this.title});
+
+  @override
+  State<AppTopBar> createState() => _AppTopBarState();
+}
+
+class _AppTopBarState extends State<AppTopBar> {
+  int _pendingPreOrderCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreOrderCount();
+    GlobalSync.instance.addListener(_loadPreOrderCount);
+  }
+
+  @override
+  void dispose() {
+    GlobalSync.instance.removeListener(_loadPreOrderCount);
+    super.dispose();
+  }
+
+  Future<void> _loadPreOrderCount() async {
+    final preOrders = await DatabaseHelper().getPreOrders(status: 'pending');
+    if (mounted) {
+      setState(() {
+        _pendingPreOrderCount = preOrders.length;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +52,7 @@ class AppTopBar extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: AppTheme.primary.withValues(alpha: 0.2),
+                color: AppTheme.primary.withOpacity( 0.2),
                 width: 2,
               ),
             ),
@@ -32,9 +64,9 @@ class AppTopBar extends StatelessWidget {
                 child: Image.asset(
                   'lib/src/logo.png',
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
+                  errorBuilder: (context, error, stackTrace) => const Icon(
                     Icons.cookie,
-                    color: AppTheme.primary.withValues(alpha: 0.6),
+                    color: AppTheme.primary,
                     size: 24,
                   ),
                 ),
@@ -43,8 +75,8 @@ class AppTopBar extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            title,
-            style: TextStyle(
+            widget.title,
+            style: const TextStyle(
               fontFamily: 'Plus Jakarta Sans',
               fontWeight: FontWeight.w700,
               fontSize: 20,
@@ -52,19 +84,60 @@ class AppTopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          IconButton(
-            onPressed: () {
-              // Navigate to cart/riwayat when clicked
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Fitur keranjang akan segera hadir'),
-                  backgroundColor: AppTheme.primary,
-                ),
+          // Shopping Cart / PreOrder Button
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PreOrderPage()),
               );
             },
-            icon: const Icon(Icons.shopping_cart_outlined),
-            color: AppTheme.primary,
-            style: IconButton.styleFrom(shape: const CircleBorder()),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryContainer.withOpacity( 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(
+                    Icons.shopping_cart_outlined,
+                    color: AppTheme.primary,
+                    size: 24,
+                  ),
+                  if (_pendingPreOrderCount > 0)
+                    Positioned(
+                      right: -8,
+                      top: -8,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.surface, width: 2),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 20,
+                          minHeight: 20,
+                        ),
+                        child: Text(
+                          _pendingPreOrderCount > 99
+                              ? '99+'
+                              : _pendingPreOrderCount.toString(),
+                          style: const TextStyle(
+                            fontFamily: 'Plus Jakarta Sans',
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

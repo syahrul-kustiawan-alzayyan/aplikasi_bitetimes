@@ -70,7 +70,8 @@ class _MainShellState extends State<MainShell> {
       body: SafeArea(
         child: PageView(
           controller: _pageController,
-          physics: const NeverScrollableScrollPhysics(), // Disable swipe if desired, or allow it
+          physics:
+              const NeverScrollableScrollPhysics(), // Disable swipe if desired, or allow it
           children: _pages,
         ),
       ),

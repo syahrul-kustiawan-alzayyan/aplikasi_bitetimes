@@ -140,9 +140,7 @@ class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 0,
         color: surfaceContainerLowest,
       ),

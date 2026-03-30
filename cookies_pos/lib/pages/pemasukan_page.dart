@@ -471,7 +471,7 @@ class _PemasukanPageState extends State<PemasukanPage>
         border: Border.all(color: badgeColor, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -511,9 +511,7 @@ class _PemasukanPageState extends State<PemasukanPage>
       decoration: BoxDecoration(
         color: AppTheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppTheme.outlineVariant.withValues(alpha: 0.1),
-        ),
+        border: Border.all(color: AppTheme.outlineVariant.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -541,7 +539,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                 'Catat setiap uang yang masuk ke kas hari ini.',
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppTheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  color: AppTheme.onSurfaceVariant.withOpacity(0.7),
                 ),
               ),
             ],
@@ -583,7 +581,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                       border: InputBorder.none,
                       hintText: '0',
                       hintStyle: TextStyle(
-                        color: AppTheme.onSurfaceVariant.withValues(alpha: 0.3),
+                        color: AppTheme.onSurfaceVariant.withOpacity(0.3),
                       ),
                     ),
                   ),
@@ -616,9 +614,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                             color: AppTheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: AppTheme.outlineVariant.withValues(
-                                alpha: 0.1,
-                              ),
+                              color: AppTheme.outlineVariant.withOpacity(0.1),
                             ),
                           ),
                           child: Row(
@@ -661,7 +657,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                         color: AppTheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: AppTheme.outlineVariant.withValues(alpha: 0.1),
+                          color: AppTheme.outlineVariant.withOpacity(0.1),
                         ),
                       ),
                       child: DropdownButtonHideUnderline(
@@ -726,7 +722,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                 hintText: 'Tulis keterangan di sini...',
                 hintStyle: TextStyle(
                   fontFamily: 'Plus Jakarta Sans',
-                  color: AppTheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  color: AppTheme.onSurfaceVariant.withOpacity(0.5),
                 ),
               ),
             ),
@@ -744,7 +740,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primary.withValues(alpha: 0.2),
+                    color: AppTheme.primary.withOpacity(0.2),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -861,7 +857,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                     (isManual
                             ? AppTheme.primaryFixedDim
                             : AppTheme.secondaryContainer)
-                        .withValues(alpha: 0.2),
+                        .withOpacity(0.2),
                 iconColor: isManual ? AppTheme.primary : AppTheme.secondary,
                 title: inc.source,
                 description: inc.description,
@@ -952,7 +948,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                       description,
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppTheme.onSurfaceVariant.withValues(alpha: 0.8),
+                        color: AppTheme.onSurfaceVariant.withOpacity(0.8),
                         fontStyle: FontStyle.italic,
                       ),
                       maxLines: 2,
@@ -993,7 +989,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryContainer.withValues(alpha: 0.3),
+                        color: AppTheme.primaryContainer.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -1013,7 +1009,7 @@ class _PemasukanPageState extends State<PemasukanPage>
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.errorContainer.withValues(alpha: 0.3),
+                        color: AppTheme.errorContainer.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -1136,7 +1132,7 @@ class _EditIncomeDialogState extends State<_EditIncomeDialog> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryContainer.withValues(alpha: 0.2),
+                  color: AppTheme.primaryContainer.withOpacity(0.2),
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(20),
                   ),
@@ -1146,7 +1142,7 @@ class _EditIncomeDialogState extends State<_EditIncomeDialog> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.2),
+                        color: AppTheme.primary.withOpacity(0.2),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -1423,7 +1419,7 @@ class _EditIncomeDialogState extends State<_EditIncomeDialog> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primary.withValues(alpha: 0.3),
+                              color: AppTheme.primary.withOpacity(0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
